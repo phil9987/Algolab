@@ -49,7 +49,6 @@ public:
 
 	// to use the Function (add an edge)
 	void addEdge(int from, int to, long capacity) {
-		std::cout << "adding edge " << from << " -> " << to << std::endl;
 		Edge e, rev_e;
 		bool success;
 		boost::tie(e, success) = boost::add_edge(from, to, G);
@@ -64,51 +63,53 @@ public:
 
 // Main
 int main() {
+	// build Graph
+	const int N = 6;
+	Graph G(N);
+	EdgeCapacityMap capacitymap = boost::get(boost::edge_capacity, G);
+	ReverseEdgeMap revedgemap = boost::get(boost::edge_reverse, G);
+	ResidualCapacityMap rescapacitymap = boost::get(boost::edge_residual_capacity, G);
+	EdgeAdder eaG(G, capacitymap, revedgemap);
 
-	int T; std::cin >> T;
-	for(int t=0; t < T; t++) {
-		// build Graph
-		int n, m, k, l;
-		std::cin >> n >> m >> k >> l;
-		Graph G(n);
-		EdgeCapacityMap capacitymap = boost::get(boost::edge_capacity, G);
-		ReverseEdgeMap revedgemap = boost::get(boost::edge_reverse, G);
-		ResidualCapacityMap rescapacitymap = boost::get(boost::edge_residual_capacity, G);
-		EdgeAdder eaG(G, capacitymap, revedgemap);
+	Vertex src = 0;
+	Vertex sink = 5;
 
-		//Vertex src = 0;
-		//Vertex sink = 5;
-		std::vector<int> polices(k);
-		std::vector<int> photos(l);
-		
-		for(int i = 0; i < k; i++) {
-			std::cin >> polices.at(i);
-		}
-		for(int i = 0; i < l; i++) {
-			std::cin >> photos.at(i);
-		}
-		for(int i = 0; i < m; i++) {
-			int x, y;
-			std::cin >> x >> y;
-			eaG.addEdge(x, y, 1);
-		}
-		
-		Vertex src = boost::add_vertex(G);
-		Vertex sink = boost::add_vertex(G);
-		std::cout << "source = " << src << std::endl;
-		std::cout << "sink = " << sink << std::endl;
-		
-		for(int i = 0; i < k; i++) {
-			eaG.addEdge(polices.at(i), sink,1);
-		}
-		for(int i = 0; i < l;i++) {
-			eaG.addEdge(src, photos.at(i), 1);
-		}
-		
-		
-		// Find a min cut via maxflow
-		int flow = boost::push_relabel_max_flow(G, src, sink);
-		std::cout << flow << std::endl;
-		
+	// add edges
+	eaG.addEdge(src, 1, 5);
+	eaG.addEdge(1, 2, 3);
+	eaG.addEdge(1, 3, 2);
+	eaG.addEdge(2, 3, 1);
+	eaG.addEdge(2, 4, 2);
+	eaG.addEdge(3, 4, 2);
+	eaG.addEdge(4, sink, 4);
 
+	// Find a min cut via maxflow
+	int flow = boost::push_relabel_max_flow(G, src, sink);
+	std::cout << "maximum flow = minimum cut = " << flow << std::endl;
+
+	// BFS to find vertex set S
+	std::vector<int> vis(N, false); // visited flags
+	std::queue<int> Q; // BFS queue (from std:: not boost::)
+	vis[src] = true; // Mark the source as visited
+	Q.push(src);
+	while (!Q.empty()) {
+		const int u = Q.front();
+		Q.pop();
+		OutEdgeIt ebeg, eend;
+		for (boost::tie(ebeg, eend) = boost::out_edges(u, G); ebeg != eend; ++ebeg) {
+			const int v = boost::target(*ebeg, G);
+			// Only follow edges with spare capacity
+			if (rescapacitymap[*ebeg] == 0 || vis[v]) continue;
+			vis[v] = true;
+			Q.push(v);
+		}
+	}
+
+	// Output S
+	for (int i = 0; i < N; ++i) {
+		if (vis[i]) std::cout << i << " ";
+	}
+	std::cout << std::endl;
+
+	return 0;
 }
