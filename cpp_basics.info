@@ -1,0 +1,12 @@
+
+#compile
+g++ -Wall -O3 -o <BINARY> <SOURCE>
+
+#run
+./out < testsets/test1.in
+
+# CGAL
+in directory call
+cgal_create_cmake_script
+cmake .
+make

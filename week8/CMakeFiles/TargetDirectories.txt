@@ -1,0 +1,4 @@
+/home/philip/ETHZ/AlgoLab/week8/CMakeFiles/rebuild_cache.dir
+/home/philip/ETHZ/AlgoLab/week8/CMakeFiles/edit_cache.dir
+/home/philip/ETHZ/AlgoLab/week8/CMakeFiles/delaunay-basic.dir
+/home/philip/ETHZ/AlgoLab/week8/CMakeFiles/delaunay.dir

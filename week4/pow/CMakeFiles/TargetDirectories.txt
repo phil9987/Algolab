@@ -1,0 +1,4 @@
+/home/philip/ETHZ/AlgoLab/week4/pow/CMakeFiles/rebuild_cache.dir
+/home/philip/ETHZ/AlgoLab/week4/pow/CMakeFiles/edit_cache.dir
+/home/philip/ETHZ/AlgoLab/week4/pow/CMakeFiles/main.dir
+/home/philip/ETHZ/AlgoLab/week4/pow/CMakeFiles/main2.dir

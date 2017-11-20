@@ -1,0 +1,3 @@
+/home/philip/ETHZ/AlgoLab/week6/motorcycles/CMakeFiles/rebuild_cache.dir
+/home/philip/ETHZ/AlgoLab/week6/motorcycles/CMakeFiles/main.dir
+/home/philip/ETHZ/AlgoLab/week6/motorcycles/CMakeFiles/edit_cache.dir

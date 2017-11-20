@@ -1,0 +1,14 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/philip/ETHZ/AlgoLab/week3/cgal_tryout2/sample2.cpp
+iostream
+-
+CGAL/Simple_cartesian.h
+-
+

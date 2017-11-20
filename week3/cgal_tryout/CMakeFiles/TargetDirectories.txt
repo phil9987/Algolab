@@ -1,0 +1,9 @@
+/home/philip/ETHZ/AlgoLab/week3/cgal_tryout/CMakeFiles/rebuild_cache.dir
+/home/philip/ETHZ/AlgoLab/week3/cgal_tryout/CMakeFiles/edit_cache.dir
+/home/philip/ETHZ/AlgoLab/week3/cgal_tryout/CMakeFiles/hello-exact.dir
+/home/philip/ETHZ/AlgoLab/week3/cgal_tryout/CMakeFiles/two-kernels.dir
+/home/philip/ETHZ/AlgoLab/week3/cgal_tryout/CMakeFiles/sample.dir
+/home/philip/ETHZ/AlgoLab/week3/cgal_tryout/CMakeFiles/miniball.dir
+/home/philip/ETHZ/AlgoLab/week3/cgal_tryout/CMakeFiles/hello-really-exact.dir
+/home/philip/ETHZ/AlgoLab/week3/cgal_tryout/CMakeFiles/hello.dir
+/home/philip/ETHZ/AlgoLab/week3/cgal_tryout/CMakeFiles/intersect.dir
