@@ -1,11 +1,3 @@
-// ALGOLAB BGL Tutorial 3
-// Flow example demonstrating
-// - breadth first search (BFS) on the residual graph
-
-// Compile and run with one of the following:
-// g++ -std=c++11 -O2 bgl_residual_bfs.cpp -o bgl_residual_bfs ./bgl_residual_bfs
-// g++ -std=c++11 -O2 -I path/to/boost_1_58_0 bgl_residual_bfs.cpp -o bgl_residual_bfs; ./bgl_residual_bfs
-
 // Includes
 // ========
 // STL includes
@@ -49,7 +41,6 @@ public:
 
 	// to use the Function (add an edge)
 	void addEdge(int from, int to, long capacity) {
-		std::cout << "adding edge " << from << " -> " << to << std::endl;
 		Edge e, rev_e;
 		bool success;
 		boost::tie(e, success) = boost::add_edge(from, to, G);
@@ -70,45 +61,49 @@ int main() {
 		// build Graph
 		int n, m, k, l;
 		std::cin >> n >> m >> k >> l;
-		Graph G(n);
+		Graph G(2*n);		// we create the same graph twice and connect it at the photo-vertices
 		EdgeCapacityMap capacitymap = boost::get(boost::edge_capacity, G);
 		ReverseEdgeMap revedgemap = boost::get(boost::edge_reverse, G);
 		ResidualCapacityMap rescapacitymap = boost::get(boost::edge_residual_capacity, G);
 		EdgeAdder eaG(G, capacitymap, revedgemap);
 
-		//Vertex src = 0;
-		//Vertex sink = 5;
 		std::vector<int> polices(k);
 		std::vector<int> photos(l);
 		
+		// read in police locations
 		for(int i = 0; i < k; i++) {
 			std::cin >> polices.at(i);
 		}
+		// read in photo locations
 		for(int i = 0; i < l; i++) {
 			std::cin >> photos.at(i);
 		}
+		// add edges
 		for(int i = 0; i < m; i++) {
 			int x, y;
 			std::cin >> x >> y;
-			eaG.addEdge(x, y, 1);
+			eaG.addEdge(x, y, k);			// add edge into original part
+			eaG.addEdge(x+n, y+n, 1);		// add edge into replicated part
 		}
 		
+		// add source and sink vertices, actually our graph has now 2*n + 2 vertices
 		Vertex src = boost::add_vertex(G);
 		Vertex sink = boost::add_vertex(G);
-		std::cout << "source = " << src << std::endl;
-		std::cout << "sink = " << sink << std::endl;
 		
 		for(int i = 0; i < k; i++) {
-			eaG.addEdge(polices.at(i), sink,1);
+			eaG.addEdge(src, polices.at(i), 1);			// add a vertex from source to each police station
+			eaG.addEdge(polices.at(i) + n, sink, 1);	// add a vertex from each police station of the the replicate part to sink 
 		}
 		for(int i = 0; i < l;i++) {
-			eaG.addEdge(src, photos.at(i), 1);
+			eaG.addEdge(photos.at(i), photos.at(i) + n, 1);	// for every photo vertex connect the original part with replicate part
 		}
 		
 		
 		// Find a min cut via maxflow
-		int flow = boost::push_relabel_max_flow(G, src, sink);
-		std::cout << flow << std::endl;
-		
+		int flow = boost::push_relabel_max_flow(G, src, sink);		// calculate max flow
+		std::cout << flow << std::endl;								// output result
+	
+	
+	}
 
 }
