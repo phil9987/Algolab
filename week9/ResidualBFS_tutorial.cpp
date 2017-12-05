@@ -71,8 +71,8 @@ int main() {
 	ResidualCapacityMap rescapacitymap = boost::get(boost::edge_residual_capacity, G);
 	EdgeAdder eaG(G, capacitymap, revedgemap);
 
-	Vertex src = 0;
-	Vertex sink = 5;
+	Vertex src = boost::add_vertex(G);
+	Vertex sink = boost::add_vertex(G);
 
 	// add edges
 	eaG.addEdge(src, 1, 5);
