@@ -1,0 +1,3 @@
+/home/junkerp/Desktop/Algolab/week10/light/CMakeFiles/rebuild_cache.dir
+/home/junkerp/Desktop/Algolab/week10/light/CMakeFiles/main.dir
+/home/junkerp/Desktop/Algolab/week10/light/CMakeFiles/edit_cache.dir
