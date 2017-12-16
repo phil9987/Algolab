@@ -6,10 +6,20 @@
 #include <CGAL/Gmpz.h>
 // choose exact integral type
 typedef CGAL::Gmpz ET;
+typedef CGAL::Quotient<ET> SolT;
+
+
 typedef CGAL::Quadratic_program<long> Program;
 typedef CGAL::Quadratic_program_solution<ET> Solution;
 
 using namespace std;
+
+double floor_to_double(const SolT& x) {
+	double a = std::floor(CGAL::to_double(x));
+	while (a > x) a -= 1;
+	while (a+1 <= x) a += 1;
+	return a;
+}
 
 void do_testcase(){
 	// by default, we have a nonnegative LP with Ax <= b
@@ -43,32 +53,32 @@ void do_testcase(){
 		cin >> x >> y >> radius;
 	}
 	
-    // sum of supplies for stadium = demand of stadium
+	// (1) sum of supplies for stadium = demand of stadium
+
+	// (2) sum of supplies of pure alcohol per stadium <= max total pure alcohol per stadium
+
 	for(int s = 0; s < num_stadiums; s++) {
 		for(int w = 0; w < num_warehouses; w++) {
-            // every stadium has num_warehouses variables
-			lp.set_a(s*num_warehouses + w, s, 1);
-			lp.set_r(s*num_warehouses + w, CGAL::EQUAL);    // supply needs to meet demand exactly
+			// every stadium has num_warehouses variables
+			lp.set_a(s*num_warehouses + w, s, 1);		// (1)
+
+			lp.set_a(s*num_warehouses + w, num_stadiums + s, warehouses.at(w).second);	// (2) set alcohol in %
 		}
-        lp.set_b(                          s, stadiums.at(s).first);       // demand
+		lp.set_r(					   	   s, CGAL::EQUAL);    // (1) supply needs to meet demand exactly
+		lp.set_b(                          s, stadiums.at(s).first);       // (1) demand
+		
+		lp.set_b(                          num_stadiums + s, stadiums.at(s).second * 100);	// (2)
+
 	}
 
-    // sum of outgoing supplies of warehouse <= max supply of warehouse
+	// sum of outgoing supplies of warehouse <= max supply of warehouse
     for(int w = 0; w < num_warehouses; w++) {
         for(int s = 0; s < num_stadiums; s++) {
-            lp.set_a(s*num_warehouses + w, num_stadiums+w,1);
+            lp.set_a(s*num_warehouses + w, (2*num_stadiums)+w, 1);	
         }
-        lp.set_b(                          num_stadiums+w, warehouses.at(w).first);
+        lp.set_b(                          (2*num_stadiums)+w, warehouses.at(w).first);	// supply
     }
 
-    // sum of supplies of pure alcohol per stadium <= max total pure alcohol per stadium
-    for(int s = 0; s < num_stadiums; s++) {
-
-        for(int w = 0; w < num_warehouses; w++) {
-            lp.set_a(s*num_warehouses + w, num_stadiums + num_warehouses + s, warehouses.at(w).second);
-        }
-        lp.set_b(                          num_stadiums + num_warehouses + s, stadiums.at(s).second * 100);
-    }
     
     
     // objective function: -sum of rewards (the solver minimizes)
@@ -83,18 +93,23 @@ void do_testcase(){
     assert (s.solves_linear_program(lp));
 
     // output exposure center and radius, if they exist
-    if (s.is_optimal() && (s.objective_value() < 0)) {
-        cout << - s.objective_value() << endl;
+    if (s.is_optimal()) {
+
+		if(s.objective_value() > 0) {
+			// result is negative
+			cout << -floor_to_double(s.objective_value()) << endl;
+		} else {
+			cout << floor_to_double(-s.objective_value()) << endl;
+		}
     } else
         std::cout << "RIOT!" << endl;
-
-	
 	
 }
 
 int main() {
 	std::ios_base::sync_with_stdio(false);
 	int T; cin >> T;
+	cout << setiosflags(std::ios::fixed) << setprecision(0);
 	for (int t = 0; t < T; t++) {
 		do_testcase();
 	}
