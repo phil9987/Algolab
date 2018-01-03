@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "tuple": "cpp",
-        "chrono": "cpp",
-        "limits": "cpp"
-    }
-}

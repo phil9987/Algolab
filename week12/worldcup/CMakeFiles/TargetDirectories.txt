@@ -1,3 +1,0 @@
-/home/philip/ETHZ/AlgoLab/week12/worldcup/CMakeFiles/rebuild_cache.dir
-/home/philip/ETHZ/AlgoLab/week12/worldcup/CMakeFiles/main.dir
-/home/philip/ETHZ/AlgoLab/week12/worldcup/CMakeFiles/edit_cache.dir

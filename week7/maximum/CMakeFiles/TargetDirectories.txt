@@ -1,3 +1,0 @@
-/home/philip/ETHZ/AlgoLab/week7/maximum/CMakeFiles/rebuild_cache.dir
-/home/philip/ETHZ/AlgoLab/week7/maximum/CMakeFiles/main.dir
-/home/philip/ETHZ/AlgoLab/week7/maximum/CMakeFiles/edit_cache.dir
