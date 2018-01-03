@@ -1,3 +1,0 @@
-/home/philip/ETHZ/AlgoLab/week8/graypes/CMakeFiles/rebuild_cache.dir
-/home/philip/ETHZ/AlgoLab/week8/graypes/CMakeFiles/main.dir
-/home/philip/ETHZ/AlgoLab/week8/graypes/CMakeFiles/edit_cache.dir
