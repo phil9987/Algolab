@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.ipp": "cpp",
+        "chrono": "cpp",
+        "limits": "cpp",
+        "array": "cpp"
+    }
+}
