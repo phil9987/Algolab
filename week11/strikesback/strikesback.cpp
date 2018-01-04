@@ -1,32 +1,83 @@
 #include <iostream>
 #include <vector>
+#include <cassert>
+#include <CGAL/basic.h>
+#include <CGAL/QP_models.h>
+#include <CGAL/QP_functions.h>
+#include <CGAL/Gmpz.h>
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+
+
+typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
+typedef K::Point_2 P;
+
 
 using namespace std;
-typedef vector<long> Asteroid;
-typedef pair<long, long> Coordinate;
+
+// choose exact integral type
+typedef CGAL::Gmpq ET;
+
+
+// program and solution types
+typedef CGAL::Quadratic_program<ET> Program;
+typedef CGAL::Quadratic_program_solution<ET> Solution;
+
+typedef pair<P, int> Asteroid;
 
 void do_testcase() {
     size_t num_asteroids, num_lasershots, num_bhunters;
     cin >> num_asteroids >> num_lasershots >> num_bhunters;
     size_t energy; cin >> energy;
 
+    // by default, we have a nonnegative LP with Ax <= b
+    Program lp (CGAL::SMALLER, true, 0, false, 0);
+
     vector<Asteroid> asteroids(num_asteroids);
     for(size_t i = 0; i < num_asteroids; i++) {
-        Asteroid tmp(3);
-        cin >> tmp.at(0) >> tmp.at(1) >> tmp.at(2); // reading x, y, d
+        P coordinate;
+        cin >> coordinate;
+        int density; cin >> density;
+        asteroids.at(i) = make_pair(coordinate, density);
     }
 
-    vector<Coordinate> lasershots(num_lasershots);
+    vector<P> lasershots(num_lasershots);
     for(size_t i = 0; i < num_lasershots; i++) {
-        long x, y; cin >> x >> y;
-        lasershots.at(i) = make_pair(x,y);
+        cin >> lasershots.at(i);
     }
 
-    vector<Coordinate> bhunters(num_bhunters);
+    vector<P> bhunters(num_bhunters);
     for(size_t i = 0; i < num_bhunters; i++) {
-        long x, y; cin >> x >> y;
-        bhunters.at(i) = make_pair(x,y);
+        cin >> bhunters.at(i);
     }
+    vector<vector<ET> > distances_per_asteroid(num_asteroids, vector<ET>(num_lasershots));
+    for(size_t i = 0; i < num_asteroids; i++) {
+        Asteroid a = asteroids.at(i);
+        lp.set_b(i, a.second); lp.set_r(i, CGAL::LARGER);  // sum of energy per lasershot is >= density of asteroid
+        for(size_t j = 0; j < num_lasershots; j++) {
+            K::FT d = CGAL::squared_distance(a.first, lasershots.at(j));
+            if(d < 1) { // d = max(1,d)
+                d = 1;
+            }
+            distances_per_asteroid.at(i).at(j) = ET(1)/d;       // weight for e_i
+            lp.set_a(j, i, ET(1)/d); 
+        }
+    }
+
+    // sum(e_i) <= energy
+    for(size_t i = 0; i < num_lasershots; i++) {
+        lp.set_a(i, num_asteroids, 1);
+        lp.set_c(i, 1); // objective function: sum of energy
+    }
+    lp.set_b(num_asteroids, energy);
+
+    Solution s = CGAL::solve_linear_program(lp, ET());
+    assert (s.solves_linear_program(lp));
+    if(s.status() == CGAL::QP_OPTIMAL) {
+        cout << "y" << endl;
+    } else {
+        cout << "n" << endl;
+    }
+
 }
 
 int main() {
