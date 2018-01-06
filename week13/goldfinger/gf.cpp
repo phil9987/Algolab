@@ -4,6 +4,8 @@
 #include <CGAL/basic.h>
 #include <CGAL/QP_models.h>
 #include <CGAL/QP_functions.h>
+#include <CGAL/Delaunay_triangulation_2.h>
+
 
 // choose exact rational type
 #include <CGAL/Gmpq.h>
@@ -17,10 +19,12 @@ typedef CGAL::Quadratic_program_solution<ET> Solution;
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef K::Point_2 P;
 
+typedef CGAL::Delaunay_triangulation_2<K>  Triangulation;
+
 
 using namespace std;
 
-bool feasible(vector<P>& mpe_position, vector<pair<P, size_t> >& sensor, vector<P> henchmen, size_t max_intensity, size_t num_mpe) {
+bool feasible(vector<P>& mpe_position, vector<K::FT>& mpe_radius, vector<pair<P, size_t> >& sensor, size_t max_intensity, size_t num_mpe) {
     
     // nonnegative linear program with Ax >= b
     Program lp (CGAL::LARGER, true, 0, false, 0);
@@ -31,8 +35,11 @@ bool feasible(vector<P>& mpe_position, vector<pair<P, size_t> >& sensor, vector<
         P sens_pos = sensor.at(sens_idx).first;
         lp.set_b(sens_idx, sensor.at(sens_idx).second);
         for(size_t mpe_idx = 0; mpe_idx < num_mpe; mpe_idx++) {
-            auto dist = CGAL::squared_distance(mpe_position.at(mpe_idx), sens_pos);
-            lp.set_a(mpe_idx, sens_idx,  ET(1)/dist);  
+            K::FT dist = CGAL::squared_distance(mpe_position.at(mpe_idx), sens_pos);
+            if(mpe_radius.at(mpe_idx) == -1 || dist <= mpe_radius.at(mpe_idx)) {
+                // only add it to equation if it's reachable or if radius == -1 (infinity)
+                lp.set_a(mpe_idx, sens_idx,  ET(1)/dist);  
+            }
         }
     }
     lp.set_b(num_sensors, max_intensity);
@@ -73,10 +80,21 @@ void run_testcase() {
     for(size_t i = 0; i < num_henchmen; i++) {
         cin >> henchmen_pos.at(i);
     }
+    // construct triangulation
+    vector<K::FT> mpe_radius(num_mpe, -1);
+    if(henchmen_pos.size() > 0) {
+        Triangulation t;
+        t.insert(henchmen_pos.begin(), henchmen_pos.end());
+        for(size_t i = 0; i < num_mpe; i++) {
+            Triangulation::Vertex_handle vh = t.nearest_vertex(mpe_position.at(i)); // get closest henchman == maximum possible radius for mpe_i
+            P nearest_henchman = vh->point();       // get K::Point_2 from vertex_handle
+            mpe_radius.at(i) = CGAL::squared_distance(mpe_position.at(i), nearest_henchman);        // calculate squared radius
+        }
+    }
 
 
     for(size_t k = 1; k <= num_mpe; k++) {
-        if(feasible(mpe_position, sensor, henchmen_pos, max_intensity, k)) {
+        if(feasible(mpe_position, mpe_radius, sensor, max_intensity, k)) {
             cout << k << endl;
             return;
         }
