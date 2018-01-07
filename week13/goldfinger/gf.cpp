@@ -24,7 +24,7 @@ typedef CGAL::Delaunay_triangulation_2<K>  Triangulation;
 
 using namespace std;
 
-bool feasible(vector<P>& mpe_position, vector<K::FT>& mpe_radius, vector<pair<P, size_t> >& sensor, size_t max_intensity, size_t num_mpe) {
+bool feasible(const vector<P>& mpe_position, const vector<K::FT>& mpe_radius, const vector<pair<P, int> >& sensor, size_t max_intensity, size_t max_mpe) {
     
     // nonnegative linear program with Ax >= b
     Program lp (CGAL::LARGER, true, 0, false, 0);
@@ -33,8 +33,8 @@ bool feasible(vector<P>& mpe_position, vector<K::FT>& mpe_radius, vector<pair<P,
     for(size_t sens_idx = 0; sens_idx < num_sensors; sens_idx++) {
         // sum(ip) >= deactivation_energy
         P sens_pos = sensor.at(sens_idx).first;
-        lp.set_b(sens_idx, sensor.at(sens_idx).second);
-        for(size_t mpe_idx = 0; mpe_idx < num_mpe; mpe_idx++) {
+        lp.set_b(sens_idx, sensor.at(sens_idx).second); //lp.set_r(sens_idx, CGAL::LARGER);
+        for(size_t mpe_idx = 0; mpe_idx < max_mpe; mpe_idx++) {
             K::FT dist = CGAL::squared_distance(mpe_position.at(mpe_idx), sens_pos);
             if(mpe_radius.at(mpe_idx) == -1 || dist <= mpe_radius.at(mpe_idx)) {
                 // only add it to equation if it's reachable or if radius == -1 (infinity)
@@ -44,29 +44,30 @@ bool feasible(vector<P>& mpe_position, vector<K::FT>& mpe_radius, vector<pair<P,
     }
     lp.set_b(num_sensors, max_intensity);
     lp.set_r(num_sensors, CGAL::SMALLER); // override default >= to <=
-    for(size_t i = 0; i < num_sensors; i++) {
+    for(size_t i = 0; i < max_mpe; i++) {
         lp.set_a(i, num_sensors, 1);
-        lp.set_c(i, 1);        // objective function: minimize sum(ip)
+        //lp.set_c(i, 1);        // objective function: minimize sum(ip)
     }
 
-    Solution s = CGAL::solve_linear_program(lp, ET());
+    Solution s = CGAL::solve_nonnegative_linear_program(lp, ET());
     assert (s.solves_linear_program(lp));
-    if (s.status() == CGAL::QP_INFEASIBLE) {
-        return false;
-    } else {
+    if (s.status() == CGAL::QP_OPTIMAL) {
         return true;
+    } else {
+        return false;
     }
 }
 
 void run_testcase() {
-    size_t num_sensors, num_mpe, num_henchmen, max_intensity;
+    size_t num_sensors, num_henchmen, max_intensity;
+    int num_mpe;
     cin >> num_sensors >> num_mpe >> num_henchmen >> max_intensity;
-    vector<pair<P, size_t> > sensor(num_sensors);
+    vector<pair<P, int> > sensor(num_sensors);
 
     for(size_t i = 0; i < num_sensors; i++) {
         P pos;
         cin >> pos;
-        size_t deactivation_energy; cin >> deactivation_energy;
+        int deactivation_energy; cin >> deactivation_energy;
         sensor.at(i) = make_pair(pos, deactivation_energy);
     }
     vector<P> mpe_position(num_mpe);
@@ -92,17 +93,30 @@ void run_testcase() {
         }
     }
 
-
-    for(size_t k = 1; k <= num_mpe; k++) {
-        if(feasible(mpe_position, mpe_radius, sensor, max_intensity, k)) {
-            cout << k << endl;
-            return;
+    size_t l = 1;
+    size_t r = num_mpe;
+    bool init = false;
+    while(l <= r) {
+        size_t p = l + ((r-l) / 4);
+        if(init && num_mpe > 20) {
+            p = 20;
+            init = false;
+        }
+        if(feasible(mpe_position, mpe_radius, sensor, max_intensity, p)) {
+            r = p - 1;
+        } else {
+            l = p + 1;
         }
     }
-    cout << "impossible" << endl;
+    if(l > num_mpe) {
+        cout << "impossible" << endl;
+    } else {
+        cout << l << endl;
+    }
 }
 
 int main() {
+    std::ios_base::sync_with_stdio(false);
     size_t T; cin >> T;
     for(size_t t = 0; t < T; t++) run_testcase();
     return 0;
