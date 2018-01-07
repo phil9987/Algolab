@@ -95,13 +95,16 @@ void run_testcase() {
 
     size_t l = 1;
     size_t r = num_mpe;
-    bool init = false;
+    // increase l as much as possible
+    while(l*2 < r && !feasible(mpe_position, mpe_radius, sensor, max_intensity, l*2)) {
+        l *= 2;
+    }
+    if(l*2 < r) {
+        // decrease r as much as possible
+        r = l*2;
+    }
     while(l <= r) {
-        size_t p = l + ((r-l) / 4);
-        if(init && num_mpe > 20) {
-            p = 20;
-            init = false;
-        }
+        size_t p = l + ((r-l) / 2);
         if(feasible(mpe_position, mpe_radius, sensor, max_intensity, p)) {
             r = p - 1;
         } else {
