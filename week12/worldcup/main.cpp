@@ -95,7 +95,6 @@ void do_testcase(){
                     if((w_in_cont && !s_in_cont) || (!w_in_cont && s_in_cont)) {
                         contour_count.at(s).at(w)++;
                     }
-                    
                 }
             }
         }
