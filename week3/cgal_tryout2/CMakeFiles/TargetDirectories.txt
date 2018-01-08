@@ -1,3 +1,0 @@
-/home/philip/ETHZ/AlgoLab/week3/cgal_tryout2/CMakeFiles/rebuild_cache.dir
-/home/philip/ETHZ/AlgoLab/week3/cgal_tryout2/CMakeFiles/edit_cache.dir
-/home/philip/ETHZ/AlgoLab/week3/cgal_tryout2/CMakeFiles/sample2.dir

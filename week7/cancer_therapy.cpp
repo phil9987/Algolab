@@ -9,6 +9,8 @@
 
 // choose exact integral type
 typedef CGAL::Gmpz ET;
+typedef CGAL::Quotient<ET> SolT;
+
 
 // program and solution types
 typedef CGAL::Quadratic_program<int> Program;

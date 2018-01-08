@@ -7,14 +7,54 @@ typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef CGAL::Delaunay_triangulation_2<K>  Triangulation;
 typedef Triangulation::Edge_iterator  Edge_iterator;
 typedef Triangulation::Vertex_iterator Vertex_iterator;
+typedef K::Point_2 P;
 
 
 using namespace std;
 
-long sq_dist(K::Point_2 p1, K::Point_2 p2) {
+// computes squared distance between p1 and p2
+long sq_dist(P p1, P p2) {
 	long a = p1.x() - p2.x();
 	long b = p1.y() - p2.y();
 	return a * a + b * b;
+}
+
+vector<int> winners(vector<P> const &lamps, vector<pair<P, long> > const &participants, int last_lamp_idx, int num_participants, long lamp_radius) {
+	Triangulation t;
+	t.insert(lamps.begin(), lamps.begin()+last_lamp_idx+1);
+	vector<int> w;
+	
+	for(int i = 0; i < num_participants; i++) {
+		P participant_location = participants.at(i).first;
+		long participant_radius = participants.at(i).second;
+		P nearest_lamp = t.nearest_vertex(participant_location)->point();
+		long min_dist = (lamp_radius + participant_radius) * (lamp_radius + participant_radius);
+		long actual_dist = sq_dist(nearest_lamp, participant_location);
+		if(actual_dist >= min_dist){
+			// participant i is not hit by any lamp!
+			w.push_back(i);
+		}
+	}
+	return w;
+}
+
+bool hitsAll(vector<P> const &lamps, vector<pair<P, long> > const &participants, int last_lamp_idx, int num_participants, long lamp_radius) {
+		Triangulation t;
+	t.insert(lamps.begin(), lamps.begin()+last_lamp_idx+1);
+	
+	for(int i = 0; i < num_participants; i++) {
+		P participant_location = participants.at(i).first;
+		long participant_radius = participants.at(i).second;
+		P nearest_lamp = t.nearest_vertex(participant_location)->point();
+		long min_dist = (lamp_radius + participant_radius) * (lamp_radius + participant_radius);
+		long actual_dist = sq_dist(nearest_lamp, participant_location);
+		if(actual_dist >= min_dist){
+
+			// participant i is not hit by any lamp!
+			return false;
+		}
+	}
+	return true;
 }
 
 
@@ -22,96 +62,50 @@ void do_testcase() {
 	int num_participants, num_lamps;
 	cin >> num_participants >> num_lamps;
 	
-	vector<K::Point_2 > participants_points(num_participants);
-	vector<long> participants_radius(num_participants);
+	vector<pair<P, long> > participants(num_participants);
 	for(int i = 0; i < num_participants; i++) {
 		long x, y, r;
 		cin >> x >> y >> r;
-		K::Point_2 p(x,y);
-		participants_points.at(i) = p;
-		participants_radius.at(i) = r;
+		P p(x,y);
+		participants.at(i) = make_pair(p,r);
 	}
 	
-	vector<K::Point_2> lamps(num_lamps);
+	vector<P> lamps(num_lamps);
 	
 	int lamp_height; cin >> lamp_height;
 	
 	for(int i = 0; i < num_lamps; i++) {
 		cin >> lamps.at(i);
 	}
-	
-	
-	// construct triangulation
-	Triangulation t;
-	t.insert(lamps.begin(), lamps.end());
-	int num_winners = 0;
-	
-	for(int i = 0; i < num_participants; i++) {
-		K::Point_2 nearest_lamp = t.nearest_vertex(participants_points.at(i))->point();
-		long min_dist = (lamp_height + participants_radius.at(i)) * (lamp_height + participants_radius.at(i));
-		long actual_dist = sq_dist(nearest_lamp, participants_points.at(i));
-		//cout << "nearest_lamp: " << nearest_lamp << " participant: " << participants_points.at(i) << endl;
-		//cout << "min_dist= " << min_dist << " actual_dist= " << actual_dist << endl;
-		//if(CGAL::squared_distance(nearest_lamp,participants_points.at(i)) >= min_dist) {
-		if(actual_dist >= min_dist){
-			cout << i << " ";
-			num_winners++;
-		}
-	}
-	
-	if(num_winners == 0) {
-		cout << "doing binary serach..." << endl;
-		int lower = 0;
-		int upper = num_participants -1;
-		vector<int> winners;
-		int middle = 0;
-		while(lower <= upper) {
-			
-			int diff = upper-lower;
-			middle = lower + (diff / 2);
-			
-			Triangulation t1;
-			t1.insert(lamps.begin(), lamps.begin() + middle);
-			int num_winners = 0;
-			
-			for(int i = 0; i < num_participants; i++) {
-				K::Point_2 nearest_lamp = t1.nearest_vertex(participants_points.at(i))->point();
-				long min_dist = (lamp_height + participants_radius.at(i)) * (lamp_height + participants_radius.at(i));
-				long actual_dist = sq_dist(nearest_lamp, participants_points.at(i));
-				if(actual_dist >= min_dist){
-					if(num_winners == 0) winners.clear();
-					//cout << i << " ";
-					num_winners++;
+	vector<int> ws = winners(lamps, participants, num_lamps-1, num_participants, lamp_height);
+	if(ws.size() > 0) {
+		for(int w: ws) cout << w << " ";
+	} else {
+		// there is no winner, find the ones which are eliminated last...
+
+		vector<int> ws0 = winners(lamps, participants, 0, num_participants, lamp_height);
+		if(ws0.size() > 0) {
+			// do binary search to find lamp index where there are still participants left
+			int lo = 0;
+			int up = num_lamps - 1;
+			while(lo < up-1) {
+				int mid = lo + ((up - lo) /2);
+				if(hitsAll(lamps, participants, mid, num_participants, lamp_height)) {
+					up = mid;
+				} else {
+					lo = mid;
 				}
 			}
-			cout << "num_winners=" << num_winners << " lower=" << lower << " upper=" << upper << " middle=" << middle << endl;
-			if(num_winners > 0) {
-				lower = middle+1;
-			} else {
-				upper = middle-1;
-			}
-		}
-		if(upper == lower) middle--;
-		
-		
-		Triangulation t2;
-		t2.insert(lamps.begin(), lamps.begin()+middle);
-		int num_winners = 0;
-		
-		for(int i = 0; i < num_participants; i++) {
-			K::Point_2 nearest_lamp = t2.nearest_vertex(participants_points.at(i))->point();
-			long min_dist = (lamp_height + participants_radius.at(i)) * (lamp_height + participants_radius.at(i));
-			long actual_dist = sq_dist(nearest_lamp, participants_points.at(i));
-			//cout << "nearest_lamp: " << nearest_lamp << " participant: " << participants_points.at(i) << endl;
-			//cout << "min_dist= " << min_dist << " actual_dist= " << actual_dist << endl;
-			//if(CGAL::squared_distance(nearest_lamp,participants_points.at(i)) >= min_dist) {
-			if(actual_dist >= min_dist){
-				cout << i << " ";
-				num_winners++;
-			}
-		}
+			vector<int> ws = winners(lamps, participants, lo, num_participants, lamp_height);
+			assert(ws.size() > 0);
+			for(int w: ws) cout << w << " ";
 
-		
+		} else {
+			// everybody is a winner
+			for(int i = 0; i < num_participants; i++) {
+				cout << i << " ";
+			}
+		}
 	}
 	
 	cout << endl;

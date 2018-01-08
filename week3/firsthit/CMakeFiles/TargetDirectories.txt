@@ -1,3 +1,0 @@
-/home/philip/ETHZ/AlgoLab/week3/firsthit/CMakeFiles/rebuild_cache.dir
-/home/philip/ETHZ/AlgoLab/week3/firsthit/CMakeFiles/edit_cache.dir
-/home/philip/ETHZ/AlgoLab/week3/firsthit/CMakeFiles/main.dir

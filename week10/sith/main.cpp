@@ -20,8 +20,8 @@ void do_testcase() {
         planets.at(i).second = true;
         int curr_max_planets = 1;
         int empire_planet_index = num_planets -1;
-        for(int j = i+1; j < empire_planet_index; j++) {
-            if(planets.at(j).second) continue;
+        for(int j = 0; j < empire_planet_index; j++) {
+            if(planets.at(j).second || i == j) continue;
             if(CGAL::squared_distance(planets.at(i).first, planets.at(j).first) <= range*range) {
                 //cout << "conquering planet " << j << " because it is reachable and empire_planet_index=" << empire_planet_index
                 curr_max_planets++;
