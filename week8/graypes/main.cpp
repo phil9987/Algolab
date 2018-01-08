@@ -26,7 +26,6 @@ int main() {
     std::cin >> n;
 
     while(n > 0) {
-
         // read points
         std::vector<P> pts;
         pts.reserve(n);
@@ -54,5 +53,4 @@ int main() {
         cout << ceil_to_double(sqrt(min_dist) * 50) << endl;
         cin >> n;
     }
-
 }
