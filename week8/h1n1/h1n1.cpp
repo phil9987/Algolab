@@ -43,10 +43,10 @@ bool can_escape(const Triangulation &t, P user, long dist2) {
         // we are inside the triangulation, check  if he can escape
         bool escape = false;
         queue<Face_handle> q;
-        f1->info() = Visited;
-        visited_faces.push_back(f1)
-        q.push(f1);
         vector<Face_handle> visited_faces;
+        f1->info() = Visited;
+        visited_faces.push_back(f1);
+        q.push(f1);
         while(!q.empty() && !escape) {
             Face_handle f = q.front();
             q.pop();
@@ -65,13 +65,13 @@ bool can_escape(const Triangulation &t, P user, long dist2) {
                          continue;
                      }
                     f2->info() = Visited;
-                    visited_faces.push_back(f2)
+                    visited_faces.push_back(f2);
                     q.push(f2);
                 }
             }
         }
         
-        // reset faces
+        //reset visited face-infos
         for(Face_handle fh: visited_faces) {
             fh->info() = Unvisited;
         }
@@ -94,7 +94,9 @@ void do_testcase(size_t num_infected_people) {
     do {
         fc->info() = Free;
     } while (++fc != t.incident_faces(t.infinite_vertex()));
-    
+    for (Face_iterator fi = t.finite_faces_begin(); fi != t.finite_faces_end(); ++fi) {
+        fi->info() = Unvisited;
+    }
     
     size_t num_users; cin >> num_users;
     vector<P> user_coord(num_users);
