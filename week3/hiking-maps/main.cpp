@@ -1,8 +1,8 @@
-#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <iostream>
 #include <stdexcept>
 
-typedef CGAL::Exact_predicates_exact_constructions_kernel K;
+typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef K::Point_2 P;
 typedef K::Line_2 L;
 typedef K::Triangle_2 T;
@@ -46,62 +46,40 @@ void do_testcase() {
         }
     }
 
-    // binary search over possible lengths:
-    size_t l = 1;
-    size_t u = num_map_parts-1;
-    size_t res = 0;
-    while(l <= u) {
-        size_t p = l + ((u - l) / 2);
-        clog << p << endl;
-        // check if sequence of length p exists
-        size_t start = 0;
-        bool found = false;
-        /*for(int i = 0; i < num_map_parts; i++) {
-            clog << "map" << i << ":\t";
-            for(int j = 0; j < num_legs;j ++) {
-                clog << contains_path.at(i).at(j) << ",";
+    size_t start = 0, end = 0, result = num_map_parts;
+    vector<int> covered(num_legs, 0);
+
+    while(end < num_map_parts) {
+        bool cover = true;
+
+        // add next map
+        for(int i = 0; i < num_legs; i++) {
+            if(contains_path.at(end).at(i)) {
+                covered.at(i)++;
+            } else {
+                if(covered.at(i) == 0) {
+                    cover = false;
+                }
             }
-            clog << endl;
-        }*/
-        while(start + p <= num_map_parts && !found) {
-            vector<bool> paths(num_legs, false);
-            int covered = 0;
-            for(size_t i = start; i < start + p; i++) {
-                //clog << "start = " << start << endl;
-                for(size_t j = 0; j < num_legs; j++) {
-                    //clog << "paths.at(j): " << paths.at(j) << " contains_path.at(" << i << ").at(" << j << "): " << contains_path.at(i).at(j) << endl;
-                    if(contains_path.at(i).at(j) == true && paths.at(j) == false) {
-                        paths.at(j) = true;
-                        covered++;
-                    }
-                    //for(int h = 0; h < num_legs; h++) clog << paths.at(h) << " ";
-                    //clog << endl << "covered: " << covered << endl;
-                }
-                if(covered == num_legs){
-                    found = true;
-                    break;
-                }
+        }
+
+        while(cover && start <= end) {
+            if((end+1) - start < result) {
+                result = end+1 - start;
             }
             start++;
+            for(int i = 0; i < num_legs; i++) {
+                if(contains_path.at(start-1).at(i)) {
+                    covered.at(i)--;
+                    if(covered.at(i) == 0) {
+                        cover = false;
+                    }
+                }
+            }
         }
-        if(found == true) {
-            // there exists a sequence of length p, search in [l, p) for sequence
-            u = p-1;
-            //clog << "there exists a sequence of length " << p << endl;
-        } else {
-            // there doesn't exist a sequence of length p, search in (p,u) for sequence
-            l = p+1;
-            //clog << "there doesnt exist a sequence of length " << p << endl;
-        }
-        //clog << "start=" << start << " p=" << p << endl;
+        end++;
     }
-
-    // l is the minimal length 
-
-
-    cout << l << endl;
-
-
+    cout << result << endl;
 }
 
 int main()
