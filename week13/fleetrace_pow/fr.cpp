@@ -1,95 +1,144 @@
+// ALGOLAB BGL Tutorial 3
+// Code snippets demonstrating 
+// - MinCostMaxFlow with arbitrary edge costs using cycle_canceling
+// - MinCostMaxFlow with non-negative edge costs using successive_shortest_path_nonnegative_weights
+
+// Compile and run with one of the following:
+// g++ -std=c++11 -O2 bgl_mincostmaxflow.cpp -o bgl_mincostmaxflow; ./bgl_mincostmaxflow
+// g++ -std=c++11 -O2 -I path/to/boost_1_58_0 bgl_mincostmaxflow.cpp -o bgl_mincostmaxflow; ./bgl_mincostmaxflow
+
 // Includes
 // ========
 // STL includes
 #include <iostream>
-#include <vector>
-#include <set>
-#include <string>
+#include <cstdlib>
 #include <map>
+#include <vector>
+// BGL includes
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/cycle_canceling.hpp>
+#include <boost/graph/push_relabel_max_flow.hpp>
+#include <boost/graph/successive_shortest_path_nonnegative_weights.hpp>
+#include <boost/graph/find_flow_cost.hpp>
 
+// BGL Graph definitions
+// ===================== 
+// Graph Type with nested interior edge properties for Cost Flow Algorithms
+typedef boost::adjacency_list_traits<boost::vecS, boost::vecS, boost::directedS> Traits;
+typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, boost::no_property,
+    boost::property<boost::edge_capacity_t, long,
+        boost::property<boost::edge_residual_capacity_t, long,
+            boost::property<boost::edge_reverse_t, Traits::edge_descriptor,
+                boost::property <boost::edge_weight_t, long> > > > > Graph; // new!
+// Interior Property Maps
+typedef boost::property_map<Graph, boost::edge_capacity_t>::type      EdgeCapacityMap;
+typedef boost::property_map<Graph, boost::edge_weight_t >::type       EdgeWeightMap; // new!
+typedef boost::property_map<Graph, boost::edge_residual_capacity_t>::type ResidualCapacityMap;
+typedef boost::property_map<Graph, boost::edge_reverse_t>::type       ReverseEdgeMap;
+typedef boost::graph_traits<Graph>::vertex_descriptor          Vertex;
+typedef boost::graph_traits<Graph>::edge_descriptor            Edge;
+typedef boost::graph_traits<Graph>::out_edge_iterator  OutEdgeIt; // Iterator
 
+// Custom Edge Adder Class, that holds the references
+// to the graph, capacity map, weight map and reverse edge map
+// ===============================================================
+class EdgeAdder {
+    Graph &G;
+    EdgeCapacityMap &capacitymap;
+    EdgeWeightMap &weightmap;
+    ReverseEdgeMap  &revedgemap;
 
-using namespace std;
-vector<vector<pair<int, int> > > boat_sailor;
-int num_boats;
-map<string, int> memo;
+public:
+    EdgeAdder(Graph &G, EdgeCapacityMap &capacitymap, EdgeWeightMap &weightmap, ReverseEdgeMap &revedgemap) 
+        : G(G), capacitymap(capacitymap), weightmap(weightmap), revedgemap(revedgemap) {}
 
-int next_valid_sailor_idx(int startidx, vector<pair<int,int> > sailors, set<int> available_sailors) {
-
-    while(startidx < sailors.size() && available_sailors.find(sailors.at(startidx).first) == available_sailors.end()) {
-        startidx++;
+    void addEdge(int u, int v, long c, long w) {
+        //std::cout << "adding edge " << u << "<->" << v <<"flow:" << c <<" cost:" << w << std::endl;
+        Edge e, rev_e;
+        boost::tie(e, boost::tuples::ignore) = boost::add_edge(u, v, G);
+        boost::tie(rev_e, boost::tuples::ignore) = boost::add_edge(v, u, G);
+        capacitymap[e] = c;
+        weightmap[e] = w; // new!
+        capacitymap[rev_e] = 0;
+        weightmap[rev_e] = -w; // new
+        revedgemap[e] = rev_e; 
+        revedgemap[rev_e] = e; 
     }
-    return startidx;
-}
-
-string create_key(int bi, int si, set<int> sailors) {
-    string out = to_string(bi) + "_" + to_string(si) + "_";
-    for(int e: sailors) {
-        out += to_string(e) + "_";
-    }
-    return out;
-}
-
-
-
-int largest_sum(int bi, int si, set<int> available_sailors) {
-    //cout << "bi=" << bi << " si=" << si << " b="<<b<<" available_sailors="<<available_sailors.size() <<endl;
-    if(bi == -1 || available_sailors.size() == 0) {
-        return 0;
-    } else {
-        // take sailor pair (bi, si) --> remove sailor from available_sailors, increase bi, add spectacle_coeff
-        // don't take sailor pair (bi, si) --> keep sailor in available_sailors, increase si
-        set<int> available_sailors_ = available_sailors;
-        int next_sailor_idx = next_valid_sailor_idx(si, boat_sailor.at(bi), available_sailors);
-        if(next_sailor_idx < boat_sailor.at(bi).size()) {
-            int sailor_idx = boat_sailor.at(bi).at(next_sailor_idx).first;
-            int spectacle_coeff = boat_sailor.at(bi).at(next_sailor_idx).second;
-            int r = available_sailors_.erase(sailor_idx);
-
-            string s1 = create_key(bi-1, 0, available_sailors_);     
-            string s2 = create_key(bi, next_sailor_idx-1, available_sailors);
-            if (memo.find(s1) == memo.end()) {
-                memo[s1] = largest_sum(bi-1, 0, available_sailors_);
-            }
-            int res1 = memo[s1];
-            if (memo.find(s2) == memo.end()){
-                memo[s2] = largest_sum(bi, next_sailor_idx+1, available_sailors);
-            }
-            int res2 = memo[s2];
-
-            //cout << res1 << " " << res2 << endl;
-
-            return max(res1 + spectacle_coeff, res2);
-        }
-        else {
-            string s3 = create_key(bi-1, 0, available_sailors);
-            if(memo.find(s3) == memo.end()) {
-                memo[s3] = largest_sum(bi-1, 0, available_sailors);
-            }
-            int res3 = memo[s3];
-            return res3;
-        }
-    }
-}
+};
 
 void do_testcase() {
-    memo.clear();
 
-    unsigned s, p;
-    std::cin >> num_boats >> s >> p;
-    boat_sailor = vector<vector<pair<int, int> > >(num_boats);
-    set<int> sailors;
-    for(int i = 0; i < s; i++) sailors.insert(i);
-  
+    unsigned b, s, p;
+    std::cin >> b >> s >> p;
+    const int N=b+s+2;
+    const int v_source = N-1;
+    const int v_target = N-2;
+
+    // Create Graph and Maps
+    Graph G(N);
+    EdgeCapacityMap capacitymap = boost::get(boost::edge_capacity, G);
+    EdgeWeightMap weightmap = boost::get(boost::edge_weight, G);
+    ReverseEdgeMap revedgemap = boost::get(boost::edge_reverse, G);
+    ResidualCapacityMap rescapacitymap = boost::get(boost::edge_residual_capacity, G);
+    EdgeAdder eaG(G, capacitymap, weightmap, revedgemap);
+    std::vector<std::vector<int> > boat_to_sailor(b, std::vector<int>(s, 0));
+
     for(size_t i = 0; i < p; i++) {
-        int bi, si;
+        Vertex bi, si;
         std::cin >> bi >> si;
+        //si += b;
         int c;
         std::cin >> c;
-        boat_sailor.at(bi).push_back(make_pair(si, c));
+        //eaG.addEdge(bi, si, 1, -c);
+        boat_to_sailor.at(bi).at(si) = c;
     }
 
-    cout << largest_sum(num_boats-1, 0, sailors) << endl;
+    for(size_t i = 0; i < b; i++) {
+        for(size_t j = 0; j < s; j++) {
+            eaG.addEdge(i, j + b, 1, -boat_to_sailor.at(i).at(j));
+        }
+    }
+
+    for(size_t bi = 0; bi < b; bi++) {
+        eaG.addEdge(v_source, bi, 1, 0);
+    }
+    for(size_t si = b; si < b+s; si++) {
+        eaG.addEdge(si, v_target, 1, 0);
+    }
+    
+    // Run the algorithm
+
+    // Option 1: Min Cost Max Flow with cycle_canceling
+    int flow1 = boost::push_relabel_max_flow(G, v_source, v_target);
+    boost::cycle_canceling(G);
+    int cost1 = boost::find_flow_cost(G);
+    std::cout << -cost1 << std::endl; // 12
+
+    /*// Option 2: Min Cost Max Flow with successive_shortest_path_nonnegative_weights
+    boost::successive_shortest_path_nonnegative_weights(G, v_source, v_target);
+    int cost2 = boost::find_flow_cost(G);
+    std::cout << "-----------------------" << std::endl;
+    std::cout << "Minimum Cost Maximum Flow with successive_shortest_path_nonnegative_weights()" << std::endl;
+    std::cout << "cost " << cost2 << std::endl; // 12
+    int s_flow = 0;
+    // Iterate over all edges leaving the source to sum up the flow values.
+    OutEdgeIt e, eend;
+    for(boost::tie(e, eend) = boost::out_edges(boost::vertex(v_source,G), G); e != eend; ++e) {
+        std::cout << "edge from " << boost::source(*e, G) << " to " << boost::target(*e, G) 
+            << " with capacity " << capacitymap[*e] << " and residual capacity " << rescapacitymap[*e] << std::endl;
+        s_flow += capacitymap[*e] - rescapacitymap[*e];
+    }
+    std::cout << "s-out flow " << s_flow << std::endl; // 5
+    // Or equivalently, you can do the summation at the sink, but with reversed sign.
+    int t_flow = 0;
+    for(boost::tie(e, eend) = boost::out_edges(boost::vertex(v_target,G), G); e != eend; ++e) {
+        std::cout << "edge from " << boost::source(*e, G) << " to " << boost::target(*e, G) 
+            << " with capacity " << capacitymap[*e] << " and residual capacity " << rescapacitymap[*e] << std::endl;
+        t_flow += rescapacitymap[*e] - capacitymap[*e];
+    }
+    std::cout << "t-in flow " << t_flow << std::endl; // 5
+    std::cout << "-----------------------" << std::endl;*/
+
 }
 
 int main() {
