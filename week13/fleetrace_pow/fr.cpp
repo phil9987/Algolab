@@ -70,9 +70,10 @@ void do_testcase() {
 
     unsigned b, s, p;
     std::cin >> b >> s >> p;
-    const int N=b+s+2;
+    const int N=b+s+3;
     const int v_source = N-1;
     const int v_target = N-2;
+    const int v_collect = N-3;
 
     // Create Graph and Maps
     Graph G(N);
@@ -81,64 +82,46 @@ void do_testcase() {
     ReverseEdgeMap revedgemap = boost::get(boost::edge_reverse, G);
     ResidualCapacityMap rescapacitymap = boost::get(boost::edge_residual_capacity, G);
     EdgeAdder eaG(G, capacitymap, weightmap, revedgemap);
-    std::vector<std::vector<int> > boat_to_sailor(b, std::vector<int>(s, 0));
+    std::vector<std::pair<int, int> > b_s(p);
+    std::vector<int> cost(p);
+    int max_c = 0;
 
     for(size_t i = 0; i < p; i++) {
         Vertex bi, si;
         std::cin >> bi >> si;
-        //si += b;
         int c;
         std::cin >> c;
-        //eaG.addEdge(bi, si, 1, -c);
-        boat_to_sailor.at(bi).at(si) = c;
+        max_c = std::max(c,max_c);
+        b_s.at(i) = std::make_pair(bi, si+b);
+        cost.at(i) = c;
     }
 
-    for(size_t i = 0; i < b; i++) {
-        for(size_t j = 0; j < s; j++) {
-            eaG.addEdge(i, j + b, 1, -boat_to_sailor.at(i).at(j));
-        }
+    for(size_t i = 0; i < p; i++) {
+        eaG.addEdge(b_s.at(i).first, b_s.at(i).second, 1, max_c - cost.at(i));
     }
 
     for(size_t bi = 0; bi < b; bi++) {
         eaG.addEdge(v_source, bi, 1, 0);
+        eaG.addEdge(bi, v_collect, 1, max_c - 0);
     }
+    eaG.addEdge(v_collect, v_target, b, 0);
+
     for(size_t si = b; si < b+s; si++) {
         eaG.addEdge(si, v_target, 1, 0);
     }
     
     // Run the algorithm
 
-    // Option 1: Min Cost Max Flow with cycle_canceling
-    int flow1 = boost::push_relabel_max_flow(G, v_source, v_target);
-    boost::cycle_canceling(G);
-    int cost1 = boost::find_flow_cost(G);
-    std::cout << -cost1 << std::endl; // 12
-
-    /*// Option 2: Min Cost Max Flow with successive_shortest_path_nonnegative_weights
+    // Min Cost Max Flow with successive_shortest_path_nonnegative_weights
     boost::successive_shortest_path_nonnegative_weights(G, v_source, v_target);
     int cost2 = boost::find_flow_cost(G);
-    std::cout << "-----------------------" << std::endl;
-    std::cout << "Minimum Cost Maximum Flow with successive_shortest_path_nonnegative_weights()" << std::endl;
-    std::cout << "cost " << cost2 << std::endl; // 12
     int s_flow = 0;
     // Iterate over all edges leaving the source to sum up the flow values.
     OutEdgeIt e, eend;
     for(boost::tie(e, eend) = boost::out_edges(boost::vertex(v_source,G), G); e != eend; ++e) {
-        std::cout << "edge from " << boost::source(*e, G) << " to " << boost::target(*e, G) 
-            << " with capacity " << capacitymap[*e] << " and residual capacity " << rescapacitymap[*e] << std::endl;
         s_flow += capacitymap[*e] - rescapacitymap[*e];
     }
-    std::cout << "s-out flow " << s_flow << std::endl; // 5
-    // Or equivalently, you can do the summation at the sink, but with reversed sign.
-    int t_flow = 0;
-    for(boost::tie(e, eend) = boost::out_edges(boost::vertex(v_target,G), G); e != eend; ++e) {
-        std::cout << "edge from " << boost::source(*e, G) << " to " << boost::target(*e, G) 
-            << " with capacity " << capacitymap[*e] << " and residual capacity " << rescapacitymap[*e] << std::endl;
-        t_flow += rescapacitymap[*e] - capacitymap[*e];
-    }
-    std::cout << "t-in flow " << t_flow << std::endl; // 5
-    std::cout << "-----------------------" << std::endl;*/
-
+    std::cout << -cost2 + s_flow*max_c << std::endl; 
 }
 
 int main() {
