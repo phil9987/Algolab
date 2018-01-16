@@ -7,15 +7,54 @@
 #include <climits>
 #include <cassert>
 #include <map>
+#include <string>
 
 using namespace std;
 
-void testcases() {
+int binary_search(long max_age, vector<long>& age, vector<int>& path) {
+
+    if(age.at(path.at(0)) <= max_age) {
+        return path.at(0);
+    }
+    size_t l = 0, r = path.size()-1;
+    while(l <= r) {
+        size_t p = (l+r) / 2;
+        long curr_age = age.at(path.at(p));
+        if(curr_age == max_age) {
+            l = p; r = p-1;
+        } else if(curr_age <= max_age) {
+            // we are too far right
+            r = p-1;
+        } else {
+            l = p+1;
+        }
+    }
+    return path.at(l);
+}
+
+void dfs(int root, vector<vector<int> >& tree, vector<long>& age, vector<int>& path, vector<int>& result, vector<vector<pair<long, int> > >& queries) {
+
+    // do binary search in path for all queries of species root
+    for(pair<long, int> q : queries.at(root)) {
+        //clog << "performing binary serach for max_age=" << q.first << " for node "<< root << endl;
+        result.at(q.second) = binary_search(q.first, age, path);
+    }
+
+    // continue dfs
+    //clog << "continuing dfs..." << endl;
+    for(int v: tree.at(root)) {
+        path.push_back(v);
+        dfs(v, tree, age, path, result, queries);
+    }
+    path.pop_back();
+}
+
+void do_testcase() {
     int n, q; cin >> n >> q;
     map<string, int> species;
     vector<string> species_rev(n);
     vector<long> age(n);
-    map<int, int> ancestor;      //map id -> vector<ancestor_id, ancestor_age, expanded> 
+    vector<vector<int> > tree(n);       // the graph parent -> child
 
     for(int i = 0; i < n; i++) {
         string s; cin >> s;
@@ -25,44 +64,35 @@ void testcases() {
     }
 
     for(int i = 0; i < n-1; i++) {
-        string s, p;
-        cin >> s >> p;
-        int s_idx, p_idx;
-        s_idx = species[s];
-        p_idx = species[p];
-        ancestor[s_idx] = p_idx;
+        string child, parent;
+        cin >> child >> parent;
+        tree.at(species[parent]).push_back(species[child]);  // s is an immediate ofspring of p
     }
+    vector<vector<pair<long, int> > > queries(n);
 
     for(int i = 0; i < q; i++) {
         // handle the queries
         string s;
         long max_age;
         cin >> s >> max_age;
-        int s_idx = species[s];
-        int best_idx = s_idx;
-        auto it = ancestor.find(s_idx);
-        while(it != ancestor.end()) {
-            int a_idx = it->second;
-            //cout << "finding ancestor of " << s << " which is " << species_rev.at(a_idx) << " with age " << age.at(a_idx) << endl;
-            if(age.at(a_idx) <= max_age) {
-                best_idx = a_idx;
-                it = ancestor.find(best_idx);
-            } else {
-                it = ancestor.end();
-            }
-        }
-        cout << species_rev.at(best_idx) << " ";
+        queries.at(species[s]).push_back(make_pair(max_age, i));
     }
-    cout << endl;
 
-	
+    int root = max_element(age.begin(), age.end()) - age.begin();
+    vector<int> result(q);
+    vector<int> path;
+    path.push_back(root);
+
+    dfs(root, tree, age, path, result, queries);
+    for(int r: result) cout << species_rev.at(r) << " ";
+    cout << endl;
 }
 
 // Main function looping over the testcases
 int main() {
 	ios_base::sync_with_stdio(false); // if you use cin/cout. Do not mix cin/cout with scanf/printf calls!
 	int T;	cin >> T;
-	while(T--)	testcases();
+	while(T--)	do_testcase();
 	return 0;
 }
 
