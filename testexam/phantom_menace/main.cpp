@@ -10,25 +10,61 @@
 #include <algorithm>
 #include <queue>
 // BGL includes
-#include <boost/config.hpp>
-#include <list>
-#include <boost/graph/biconnected_components.hpp>
 #include <boost/graph/adjacency_list.hpp>
-#include <iterator>
+#include <boost/graph/push_relabel_max_flow.hpp>
+#include <boost/graph/edmonds_karp_max_flow.hpp>
+// Namespaces
+// using namespace std;
+// using namespace boost;
 
-namespace boost
-{
-  struct edge_component_t
-  {
-    enum
-    { num = 555 };
-    typedef edge_property_tag kind;
-  }
-  edge_component;
-}
 
+// BGL Graph definitions
+// =====================
+// Graph Type with nested interior edge properties for Flow Algorithms
+typedef	boost::adjacency_list_traits<boost::vecS, boost::vecS, boost::directedS> Traits;
+typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, boost::no_property,
+	boost::property<boost::edge_capacity_t, long,
+		boost::property<boost::edge_residual_capacity_t, long,
+			boost::property<boost::edge_reverse_t, Traits::edge_descriptor> > > >	Graph;
+// Interior Property Maps
+typedef	boost::property_map<Graph, boost::edge_capacity_t>::type		EdgeCapacityMap;
+typedef	boost::property_map<Graph, boost::edge_residual_capacity_t>::type	ResidualCapacityMap;
+typedef	boost::property_map<Graph, boost::edge_reverse_t>::type		ReverseEdgeMap;
+typedef	boost::graph_traits<Graph>::vertex_descriptor			Vertex;
+typedef	boost::graph_traits<Graph>::edge_descriptor			Edge;
+typedef	boost::graph_traits<Graph>::edge_iterator			EdgeIt;
 using namespace std;
-using namespace boost;
+
+
+// Custom Edge Adder Class, that holds the references
+// to the graph, capacity map and reverse edge map
+// ===================================================
+class EdgeAdder {
+	Graph &G;
+	EdgeCapacityMap	&capacitymap;
+	ReverseEdgeMap	&revedgemap;
+
+public:
+	// to initialize the Object
+	EdgeAdder(Graph & G, EdgeCapacityMap &capacitymap, ReverseEdgeMap &revedgemap):
+		G(G), capacitymap(capacitymap), revedgemap(revedgemap){}
+
+	// to use the Function (add an edge)
+	void addEdge(int from, int to, long capacity) {
+        
+        cout << "adding edge " << from << "->" << to << " cap=" << capacity << endl;
+		Edge e, rev_e;
+		bool success;
+		boost::tie(e, success) = boost::add_edge(from, to, G);
+		boost::tie(rev_e, success) = boost::add_edge(to, from, G);
+		capacitymap[e] = capacity;
+		capacitymap[rev_e] = 0; // reverse edge has no capacity!
+		revedgemap[e] = rev_e;
+		revedgemap[rev_e] = e;
+	}
+};
+
+
 
 // Functions
 // =========
@@ -36,60 +72,42 @@ using namespace boost;
 void testcase() {
     unsigned num_obj, num_links, num_starts, num_dest;
     cin >> num_obj >> num_links >> num_starts >> num_dest;
-    typedef adjacency_list < vecS, vecS, undirectedS,
-    no_property, property < edge_component_t, std::size_t > >graph_t;
-    typedef graph_traits < graph_t >::vertex_descriptor vertex_t;
-    graph_t g(num_obj);
     
-    vector<pair<size_t, size_t> > links(num_links);
+    int N = num_obj*2 + 2;
+    int v_source = N-1;
+    int v_target = N-2;
+    Graph G(N);
+	EdgeCapacityMap capacitymap = boost::get(boost::edge_capacity, G);
+	ReverseEdgeMap revedgemap = boost::get(boost::edge_reverse, G);
+	ResidualCapacityMap rescapacitymap = boost::get(boost::edge_residual_capacity, G);
+	EdgeAdder eaG(G, capacitymap, revedgemap);
+
+    
+    for(size_t i = 0; i < num_obj; i++) {
+        eaG.addEdge(i, num_obj + i, 1);     // in --> out edge to achieve max throughput of 1 per vertex
+    }
+    
     for(size_t i = 0; i < num_links; i++) {
         size_t from, to;
         cin >> from >> to;
         // directed edge from --> to
-        links.at(i) = make_pair(from, to);
-        add_edge(from, to, g);
+        eaG.addEdge(num_obj + from, to, 1);
     }
     vector<size_t> starts(num_starts);
     for(size_t i = 0; i < num_starts; i++) {
         cin >> starts.at(i);
+        eaG.addEdge(v_source, starts.at(i), INT_MAX);
     }
     vector<size_t> dest(num_dest);
     for(size_t i = 0; i < num_dest; i++) {
         cin >> dest.at(i);
+        eaG.addEdge(num_obj + dest.at(i), v_target, INT_MAX);
     }
     
-    property_map < graph_t, edge_component_t >::type
-    component = get(edge_component, g);
+    long flow = boost::push_relabel_max_flow(G, v_source, v_target);
+    
+    cout << flow << endl;
 
-    
-    for(size_t i = 0; i < num_comps; i++) {
-        // for every vertex: remove it and check if no start,dest pair is in same component
-        // only works for min(num_start, num_dest) = 2
-        
-        std::size_t num_comps = biconnected_components(g, component);
-        
-        for(auto s: starts) {
-            
-            for(auto d: dest) {
-                
-            }
-        }
-        //std::vector<vertex_t> art_points;
-        //articulation_points(g, std::back_inserter(art_points));
-
-
-        graph_traits < graph_t >::edge_iterator ei, ei_end;
-        for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei)
-        std::cout << (char)(source(*ei, g) + 'A') << " -- " 
-                  << (char)(target(*ei, g) + 'A')
-                  << "[label=\"" << component[*ei] << "\"]\n";
-        std::cout << "}\n";
-        
-    }
-    
-    
-    
-    
 
     
 }
