@@ -52,7 +52,7 @@ public:
 	// to use the Function (add an edge)
 	void addEdge(int from, int to, long capacity) {
         
-        cout << "adding edge " << from << "->" << to << " cap=" << capacity << endl;
+        //cout << "adding edge " << from << "->" << to << " cap=" << capacity << endl;
 		Edge e, rev_e;
 		bool success;
 		boost::tie(e, success) = boost::add_edge(from, to, G);
@@ -106,10 +106,7 @@ void testcase() {
     
     long flow = boost::push_relabel_max_flow(G, v_source, v_target);
     
-    cout << flow << endl;
-
-
-    
+    cout << flow << endl;    
 }
 
 // Main function to loop over the testcases
