@@ -52,3 +52,4 @@ settings.json
 
 Makefile
 helpers.mk
+setup_cgal.sh
