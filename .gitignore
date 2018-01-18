@@ -49,3 +49,6 @@ CTestTestfile.cmake
 .vscode
 *.res
 settings.json
+
+Makefile
+helpers.mk
