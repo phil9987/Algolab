@@ -18,6 +18,57 @@
 #include <cassert>
 #include <bitset>
 
+// BGL includes
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/cycle_canceling.hpp>
+#include <boost/graph/push_relabel_max_flow.hpp>
+#include <boost/graph/successive_shortest_path_nonnegative_weights.hpp>
+#include <boost/graph/find_flow_cost.hpp>
+
+// BGL Graph definitions
+// ===================== 
+// Graph Type with nested interior edge properties for Cost Flow Algorithms
+typedef boost::adjacency_list_traits<boost::vecS, boost::vecS, boost::directedS> Traits;
+typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, boost::no_property,
+    boost::property<boost::edge_capacity_t, long,
+        boost::property<boost::edge_residual_capacity_t, long,
+            boost::property<boost::edge_reverse_t, Traits::edge_descriptor,
+                boost::property <boost::edge_weight_t, long> > > > > Graph; // new!
+// Interior Property Maps
+typedef boost::property_map<Graph, boost::edge_capacity_t>::type      EdgeCapacityMap;
+typedef boost::property_map<Graph, boost::edge_weight_t >::type       EdgeWeightMap; // new!
+typedef boost::property_map<Graph, boost::edge_residual_capacity_t>::type ResidualCapacityMap;
+typedef boost::property_map<Graph, boost::edge_reverse_t>::type       ReverseEdgeMap;
+typedef boost::graph_traits<Graph>::vertex_descriptor          Vertex;
+typedef boost::graph_traits<Graph>::edge_descriptor            Edge;
+typedef boost::graph_traits<Graph>::out_edge_iterator  OutEdgeIt; // Iterator
+
+// Custom Edge Adder Class, that holds the references
+// to the graph, capacity map, weight map and reverse edge map
+// ===============================================================
+class EdgeAdder {
+    Graph &G;
+    EdgeCapacityMap &capacitymap;
+    EdgeWeightMap &weightmap;
+    ReverseEdgeMap  &revedgemap;
+
+public:
+    EdgeAdder(Graph &G, EdgeCapacityMap &capacitymap, EdgeWeightMap &weightmap, ReverseEdgeMap &revedgemap) 
+        : G(G), capacitymap(capacitymap), weightmap(weightmap), revedgemap(revedgemap) {}
+
+    void addEdge(int u, int v, long c, long w) {
+        Edge e, rev_e;
+        boost::tie(e, boost::tuples::ignore) = boost::add_edge(u, v, G);
+        boost::tie(rev_e, boost::tuples::ignore) = boost::add_edge(v, u, G);
+        capacitymap[e] = c;
+        weightmap[e] = w; // new!
+        capacitymap[rev_e] = 0;
+        weightmap[rev_e] = -w; // new
+        revedgemap[e] = rev_e; 
+        revedgemap[rev_e] = e; 
+    }
+};
+
 using namespace std;
 
 int best_score(vector<vector<int> >& A, int n) {
@@ -35,42 +86,62 @@ int best_score(vector<vector<int> >& A, int n) {
     return B.at(n-1).at(n-1);
 }
 
+int cost(int cost, int max) {
+    return max - cost;
+}
+
 void testcases() {
     int n; cin >> n;
     vector<vector<int> > A(n, vector<int>(n));
 
+    int max_c = 0;
+
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
             cin >> A.at(i).at(j);
+            max_c = max(A.at(i).at(j), max_c);
         }
     }
-    int best = 0;
-    // there are 2*(n-1) edges from 0,0 to n-1,n-1, hence as many decision points
-    for(long long i = 0; i < 1 << 2*(n-1); i++ ) {
-        bitset<60> b(i);
-        int v = A.at(0).at(0);
-        vector<vector<int> > A_ = A;
-        A_.at(0).at(0) = 0;
-        // calculate path value
-        pair<int, int> pos = make_pair(0, 0);
-        for(int p = 0; p < 2*(n-1); p++) {
-            if(b.test(p)) {
-                // we go right
-                if(pos.second < n-1) pos.second++;
-                else pos.first++;
-            } else {
-                // we go down
-                if(pos.first < n-1) pos.first++;
-                else pos.second ++;
-            }
-            v += A_.at(pos.first).at(pos.second);
-            A_.at(pos.first).at(pos.second) = 0;
-        }
-        int tmp_max = v + best_score(A_, n);
-        best = max(tmp_max, best);
-    }
+    long N = n*n;
+    // Create Graph and Maps
+    Graph G(2*N+2);
+    Vertex v_source = 2*N;
+    Vertex v_target = 2*N+1;
+    EdgeCapacityMap capacitymap = boost::get(boost::edge_capacity, G);
+    EdgeWeightMap weightmap = boost::get(boost::edge_weight, G);
+    ReverseEdgeMap revedgemap = boost::get(boost::edge_reverse, G);
+    ResidualCapacityMap rescapacitymap = boost::get(boost::edge_residual_capacity, G);
+    EdgeAdder eaG(G, capacitymap, weightmap, revedgemap);
 
-    cout << best << endl;
+    for(int i = 0; i < n; i++){
+        for(int j = 0; j < n; j++) {
+            int cur = i*n + j;
+            eaG.addEdge(cur, N + cur, 1, cost(A.at(i).at(j), max_c));
+            eaG.addEdge(cur, N + cur, 1, cost(0, max_c));
+        }
+    }    
+
+    for(int i = 0; i < n; i++) {
+        for(int j = 0; j < n; j++) {
+            // right direction
+            int cur = i*n + j;
+            if(j < n-1) {
+                int right = cur + 1;
+                eaG.addEdge(N + cur, right, 2, 0);
+            }
+            if(i < n-1) {
+                int down = cur + n;
+                eaG.addEdge(N + cur, down, 2, 0);
+            }
+            // down direction
+        }
+    }
+    eaG.addEdge(v_source, 0, 2, 0);
+    eaG.addEdge(2*N-1, v_target, 2, 0);
+
+    boost::successive_shortest_path_nonnegative_weights(G, v_source, v_target);
+    int cost2 = boost::find_flow_cost(G);
+    cout << ((2*n-1)*2 )*max_c - cost2 << endl;
 
 }
 
