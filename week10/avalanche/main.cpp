@@ -37,14 +37,23 @@ typedef property_map<DirectedGraph, edge_weight_t>::type	WeightMap;	// property 
 typedef adjacency_list<vecS, vecS, undirectedS, no_property, no_property > Graph;
 
 
-bool max_cardinality_matching_of_size(vector<vector<int> >& min_time, size_t num_agents, size_t num_shelters, int max_time){
+bool max_cardinality_matching_of_size(vector<vector<int> >& min_time, size_t num_agents, size_t num_shelters, int max_time, int shelter_enter_time, int shelter_capacity){
 	int V = num_agents + num_shelters;
+
+	if(shelter_capacity > 1) {
+		V += num_shelters;
+	}
 	Graph G(V);
 	for(size_t a = 0; a < num_agents; a++) {
 		for(size_t s = 0; s < num_shelters; s++) {
 			int t = min_time.at(a).at(s);
-			if(t <= max_time ) {
+			if(t <= max_time - shelter_enter_time) {
 				add_edge(a, num_agents + s, G);
+			}
+			if(shelter_capacity > 1) {
+				if(t <= max_time - 2*shelter_enter_time) {
+					add_edge(a, num_agents + num_shelters + s, G);
+				}
 			}
 		}
 	}
@@ -114,7 +123,7 @@ void testcases() {
 		//while(!max_cardinality_matching_of_size(min_time_agent_shelter, a, s, lmax-d)) lmax *= 2;
 		while(lmin != lmax) {
 			int p = lmin + (lmax - lmin)/2;
-			if(!max_cardinality_matching_of_size(min_time_agent_shelter, a, s, p-d)) lmin = p + 1;
+			if(!max_cardinality_matching_of_size(min_time_agent_shelter, a, s, p, d, c)) lmin = p + 1;
 			else lmax = p;
 		}
 		cout << lmin << endl;
