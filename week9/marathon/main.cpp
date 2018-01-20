@@ -61,6 +61,20 @@ public:
     }
 };
 
+pair<long, long> min_cost_max_flow(Graph& G, Vertex v_source, Vertex v_target, Edge src_edge, int new_flow, EdgeCapacityMap& capacitymap, ResidualCapacityMap& rescapacitymap) {
+    // returns a pair <cost, flow>
+    OutEdgeIt e, eend;
+    capacitymap[src_edge] = new_flow;
+    boost::successive_shortest_path_nonnegative_weights(G, v_source, v_target);
+    long cost = boost::find_flow_cost(G);
+    long s_flow = 0;
+    // Iterate over all edges leaving the source to sum up the flow values.
+    for(boost::tie(e, eend) = boost::out_edges(boost::vertex(v_source,G), G); e != eend; ++e) {
+        s_flow += capacitymap[*e] - rescapacitymap[*e];
+    }
+    return make_pair(cost, s_flow);
+}
+
 void testcase() {
     /*
         idea: find shortest path sp over length
@@ -91,48 +105,31 @@ void testcase() {
         eaG.addEdge(b, a, c, d);
     }
 
-    pair<Edge, Edge> src_edge = eaG.addEdge(v_source, s, 1, 0);
+    pair<Edge, Edge> src_edge = eaG.addEdge(v_source, s, 1, 0);     // to find shortest path we allow a flow of 1 (equal to 1 runner), hence the max_cost will be the shortest path
 
     boost::successive_shortest_path_nonnegative_weights(G, v_source, v_target);
     int shortest_path = boost::find_flow_cost(G);
 
-    OutEdgeIt e, eend;
-
     long lmin = 1, lmax = 1;
     while(1) {
         lmax *= 2;
-        capacitymap[src_edge.first] = lmax;
-        boost::successive_shortest_path_nonnegative_weights(G, v_source, v_target);
-        long cost = boost::find_flow_cost(G);
-        long s_flow = 0;
-        // Iterate over all edges leaving the source to sum up the flow values.
-        for(boost::tie(e, eend) = boost::out_edges(boost::vertex(v_source,G), G); e != eend; ++e) {
-            s_flow += capacitymap[*e] - rescapacitymap[*e];
-        }
-        //cout << "flow=" << s_flow << endl;
-        //cout << "cost=" << cost << endl;
-        //cout << "dist=" << (float)cost / (float)s_flow << endl;
-        if (s_flow < lmax || (cost + s_flow-1) / s_flow > shortest_path) break;
+        pair<long, long> cost_flow = min_cost_max_flow(G, v_source, v_target, src_edge.first, lmax, capacitymap, rescapacitymap);
+        long flow = cost_flow.second;
+        long cost = cost_flow.first;
+        if (flow < lmax || (cost + flow-1) / flow > shortest_path) break;
     } 
 
     while (lmin != lmax) {
         long p = lmin + (lmax-lmin)/2;
-        //cout << "p=" << p << endl;
-        capacitymap[src_edge.first] = p;
-        boost::successive_shortest_path_nonnegative_weights(G, v_source, v_target);
-        long cost = boost::find_flow_cost(G);
-        long s_flow = 0;
-        // Iterate over all edges leaving the source to sum up the flow values.
-        for(boost::tie(e, eend) = boost::out_edges(boost::vertex(v_source,G), G); e != eend; ++e) {
-            s_flow += capacitymap[*e] - rescapacitymap[*e];
+        pair<long, long> cost_flow = min_cost_max_flow(G, v_source, v_target, src_edge.first, p, capacitymap, rescapacitymap);
+        long flow = cost_flow.second;
+        long cost = cost_flow.first;
+        if (    flow < p                                        // if flow is smaller than possible flow p        
+            ||  (cost + flow-1) / flow > shortest_path) {       // OR if cost / flow > shortest_path (cost = num_runners*length,                                                          hence we need to divide it by length. If the length is longer                                                          than the shortest path, no runner would take it so we can stop)
+            lmax = p;     
         }
-        //cout << "flow=" << s_flow << endl;
-        //cout << "cost=" << cost << endl;
-        //cout << "dist=" << (float)cost / (float)s_flow << endl;
-        if (s_flow < p || (cost + s_flow-1) / s_flow > shortest_path) lmax = p;
         else lmin = p+1; 
     }
-    //L = lmin;*/
     cout << lmin-1 << endl;
 }
 
