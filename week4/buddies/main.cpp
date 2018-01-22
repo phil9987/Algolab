@@ -3,10 +3,8 @@
 // STL includes
 #include <iostream>
 #include <vector>
-#include <algorithm>
 #include <map>
 #include <string>
-#include <bitset>
 // BGL includes
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/max_cardinality_matching.hpp>
@@ -17,18 +15,16 @@ using namespace boost;
 
 // BGL Graph definitions
 // =====================
-// Graph Type with nested interior edge properties for Flow Algorithms
-typedef adjacency_list<vecS, vecS, undirectedS> Graph; 
+typedef adjacency_list<vecS, vecS, undirectedS>                 Graph; 
 typedef	boost::graph_traits<Graph>::vertex_descriptor			Vertex;
-typedef	boost::graph_traits<Graph>::edge_descriptor			Edge;
 
 // Functions
 // =========
 // Function for an individual testcase
 void testcase() {
     size_t n, c, f; cin >> n >> c >> f;
-    map<string, int> ctoid;
-    size_t next_id = 0;
+    map<string, int> ctoid;     // map 'characteristic' -> id
+    size_t next_id = 0;         // the next free id if a characteristic is not yet in the map
     vector<set<int> > students(n);
     
     for(size_t i = 0; i < n; i++) {
@@ -36,50 +32,28 @@ void testcase() {
         for(size_t j = 0; j < c; j++) {
             string characteristic; cin >> characteristic;
             if(ctoid.find(characteristic) == ctoid.end()) {
-                ctoid[characteristic] = next_id++;
+                ctoid[characteristic] = next_id++;      // add the missing characteristic to the map and increment next_id
             }
-            charset.insert(ctoid[characteristic]);
+            charset.insert(ctoid[characteristic]);      // insert the id of the characteristic into student's charset
         }
         students.at(i) = charset;
     }
-    vector<vector<int> > commonchar(n, vector<int>(n));
-    for(size_t i = 0; i < n; i++) {
-        for(size_t j = 0; j < n; j++) {
-            vector<int> v_intersection;
-            set_intersection(students.at(i).begin(), students.at(i).end(), students.at(j).begin(), students.at(j).end(), back_inserter(v_intersection));
-            commonchar.at(i).at(j) = v_intersection.size();
-        }
-    }
-
-	// Create Graph and Maps
-    size_t V = n;
-	Graph G(V);
+    Graph G(n);
     for(size_t i = 0; i < n; i++) {
         for(size_t j = i+1; j < n; j++) {
-            if(commonchar.at(i).at(j) > f) {
+            vector<int> v_intersection;
+            set_intersection(students.at(i).begin(), students.at(i).end(), students.at(j).begin(), students.at(j).end(), back_inserter(v_intersection));
+            if(v_intersection.size() > f) {     // in that case we can find a better matching, if existent
                 add_edge(i, j, G);
             }
         }
     }
-
-
-	vector<Vertex> matemap(V);
-    // Use the vector as an Exterior Property Map: Vertex -> Matched mate
+    // from slides week 4
+	vector<Vertex> matemap(n);
     edmonds_maximum_cardinality_matching(G, make_iterator_property_map(matemap.begin(), get(vertex_index, G)));
-    // Look at the matching
-    // Matching size
     int matchingsize = matching_size(G, make_iterator_property_map(matemap.begin(), get(vertex_index, G)));
 
-    // unmatched vertices get the NULL_VERTEX as mate.
-    const Vertex NULL_VERTEX = graph_traits<Graph>::null_vertex();
-    bool all_matched = matchingsize == n/2;
-    /*for (int i = 0; i < V; ++i) {
-        if (matemap[i] == NULL_VERTEX) {
-            all_matched = false;
-            break;
-        }
-    }*/
-    if(all_matched) {
+    if(matchingsize == n/2) {
         cout << "not optimal" << endl;
     } else {
         cout << "optimal" << endl;
