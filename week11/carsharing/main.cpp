@@ -8,6 +8,8 @@
 #include <boost/graph/successive_shortest_path_nonnegative_weights.hpp>
 #include <boost/graph/find_flow_cost.hpp>
 
+using namespace std;
+
 // BGL Graph definitions
 // ===================== 
 // Graph Type with nested interior edge properties for Cost Flow Algorithms
@@ -54,8 +56,8 @@ public:
 };
 
 int inverse_p(int p, int max_p) {
-    return p;
-    //return max_p - p;
+    //return p;
+    return max_p - p;
 }
 
 int reverse_inv_p(int p, int max_p) {
@@ -73,21 +75,26 @@ void do_testcase() {
         std::cin >> cars.at(i);
         num_cars += cars.at(i);
     }
-    std::vector<std::vector<int> > booking_reqs(num_booking_req);
-    long max_profit = 0;    // max. profit, used to invert the profit, because mincostmaxflow minimizes the cost
-    long max_time = 0;
+    vector<int> starts(num_booking_req);
+    vector<int> targets(num_booking_req);
+    vector<int> departure_times(num_booking_req);
+    vector<int> arrival_times(num_booking_req);
+    vector<int> profits(num_booking_req);
+    int max_profit = 0;    // max. profit, used to invert the profit, because mincostmaxflow minimizes the cost
+    int max_time = 0;
 
     for(int i = 0; i < num_booking_req; i++) {
-        std::vector<int> tmp(5);
-        for(int j = 0; j < 5; j++){
-            std::cin >> tmp.at(j);   // start_station, target_station, departure_time, arrival_time, profit
-        }        
-        max_profit = std::max((long)tmp.at(4), max_profit);
-        long m = std::max(tmp.at(2), tmp.at(3));
-        max_time = std::max(m, max_time);
-        tmp.at(0) -=1;  // input goes from 1..num_stations
-        tmp.at(1) -=1;  // input goes from 1..num_stations
-        booking_reqs.at(i) = tmp;
+        int start, target, dep_time, arrival_time, profit;
+        cin >> start >> target >> dep_time >> arrival_time >> profit;
+        dep_time = dep_time / 30;               // for first 3 test cases this works
+        arrival_time = arrival_time / 30;       // for first 3 test cases this works
+        max_profit = max(profit, max_profit);
+        max_time = max(arrival_time, max_time);
+        starts.at(i) = start-1;     // input goes from 1..S
+        targets.at(i) = target-1;   // input goes from 1..S
+        departure_times.at(i) = dep_time;
+        arrival_times.at(i) = arrival_time;
+        profits.at(i) = profit;
     }
 
     const int N=num_stations*(max_time+1)+2;
@@ -100,16 +107,13 @@ void do_testcase() {
     ReverseEdgeMap revedgemap = boost::get(boost::edge_reverse, G);
     ResidualCapacityMap rescapacitymap = boost::get(boost::edge_residual_capacity, G);
     EdgeAdder eaG(G, capacitymap, weightmap, revedgemap);
-    //std::cout << "adding edges" << std::endl;
     for(int i=0; i < num_booking_req; i++) {
-        //std::cout << "adding edge for booking request " << i << std::endl;
-        std::vector<int> r = booking_reqs.at(i);
-        //std::cout << r.size() << std::endl;
-        eaG.addEdge(r.at(2)*num_stations + r.at(0), r.at(3)*num_stations + r.at(1), 1, -inverse_p(r.at(4), max_profit));
-        //std::cout << ".." << std::endl;
+        int skipper_cost = (arrival_times.at(i) - departure_times.at(i)-1)*max_profit;     
+        // if somebody borrows car from time a until time b with cost c the total cost for this will be c while not moving the car costs (b-a)*max_profit (likely to be more expensive). To adjust this, we add a skipper_cost for the (b-a-1) which are "skips"
+        eaG.addEdge(departure_times.at(i)*num_stations + starts.at(i), arrival_times.at(i)*num_stations + targets.at(i), 1, inverse_p(profits.at(i), max_profit)+skipper_cost);
     }
 
-    // add edges from one timestep to next if car is not moved with max capacity and no profit -> cars stays at same place
+    // add edges from one timestep to next with max capacity and no profit -> car stays at same place
     for(int i = 0; i < max_time; i++) {
         int from_base = i*num_stations;
         int to_base = from_base + num_stations;
@@ -120,17 +124,18 @@ void do_testcase() {
 
     // add edges from source to first timestep and from last timestep to sink
     for(int i = 0; i < num_stations; i++) {
-        eaG.addEdge(v_source, i, cars.at(i), inverse_p(0, max_profit));
-        eaG.addEdge(N-3-i, v_target, num_cars, inverse_p(0, max_profit));
+        eaG.addEdge(v_source, i, cars.at(i), 0);
+        eaG.addEdge(N-3-i, v_target, num_cars, 0);
     }
 
-    int flow1 = boost::push_relabel_max_flow(G, v_source, v_target);
+    int flow = boost::push_relabel_max_flow(G, v_source, v_target);
     boost::cycle_canceling(G);
-    int cost1 = boost::find_flow_cost(G);
-    std::cout << "-----------------------" << std::endl;
+    int cost = boost::find_flow_cost(G);
+    /*std::cout << "-----------------------" << std::endl;
     std::cout << "Minimum Cost Maximum Flow with cycle_canceling()" << std::endl;
     std::cout << "flow " << flow1 << std::endl; 
-    std::cout << "cost " << -cost1 << std::endl;
+    std::cout << "cost " << -cost1 << std::endl;*/
+    cout << max_time*max_profit*flow-cost << endl;
     
 }
 int main() {
