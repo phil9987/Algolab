@@ -1,6 +1,7 @@
 #include <vector>
 #include <iostream>
 #include <cstdlib>
+#include <map>
 // BGL includes
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/successive_shortest_path_nonnegative_weights.hpp>
@@ -81,11 +82,13 @@ void do_testcase() {
     int max_profit = 0;    // max. profit, used to invert the profit, because mincostmaxflow minimizes the cost
     int max_time = 0;
 
+    set<int> times;
+
     for(int i = 0; i < num_booking_req; i++) {
         int start, target, dep_time, arrival_time, profit;
         cin >> start >> target >> dep_time >> arrival_time >> profit;
-        dep_time = dep_time / 30;               // for first 3 test cases this works
-        arrival_time = arrival_time / 30;       // for first 3 test cases this works
+        dep_time = dep_time;
+        arrival_time = arrival_time;
         max_profit = max(profit, max_profit);
         max_time = max(arrival_time, max_time);
         starts.at(i) = start-1;     // input goes from 1..S
@@ -93,8 +96,19 @@ void do_testcase() {
         departure_times.at(i) = dep_time;
         arrival_times.at(i) = arrival_time;
         profits.at(i) = profit;
+        times.insert(dep_time);
+        times.insert(arrival_time);
     }
+    map<int, int>   time_to_id;
+    vector<int>     id_to_time(times.size());
+    size_t i = 0;
 
+    for(auto it = times.begin(); it != times.end(); it++) {
+        time_to_id[*it] = i;
+        id_to_time.at(i) = *it;
+        i++;
+    }
+    max_time = times.size();
     const int N=num_stations*(max_time+1)+2;
     const int v_source = N-2;
     const int v_target = N-1;
@@ -106,9 +120,11 @@ void do_testcase() {
     ResidualCapacityMap rescapacitymap = boost::get(boost::edge_residual_capacity, G);
     EdgeAdder eaG(G, capacitymap, weightmap, revedgemap);
     for(int i=0; i < num_booking_req; i++) {
-        int skipper_cost = (arrival_times.at(i) - departure_times.at(i)-1)*max_profit;     
+        int dep_time = time_to_id[departure_times.at(i)];
+        int arr_time = time_to_id[arrival_times.at(i)];
+        int skipper_cost = (arr_time - dep_time-1)*max_profit;     
         // if somebody borrows car from time a until time b with cost c the total cost for this will be c while not moving the car costs (b-a)*max_profit (likely to be more expensive). To adjust this, we add a skipper_cost for the (b-a-1) which are "skips"
-        eaG.addEdge(departure_times.at(i)*num_stations + starts.at(i), arrival_times.at(i)*num_stations + targets.at(i), 1, inverse_p(profits.at(i), max_profit)+skipper_cost);
+        eaG.addEdge(dep_time*num_stations + starts.at(i), arr_time*num_stations + targets.at(i), 1, inverse_p(profits.at(i), max_profit)+skipper_cost);
     }
 
     // add edges from one timestep to next with max capacity and no profit -> car stays at same place
