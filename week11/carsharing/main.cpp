@@ -3,8 +3,6 @@
 #include <cstdlib>
 // BGL includes
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/cycle_canceling.hpp>
-#include <boost/graph/push_relabel_max_flow.hpp>
 #include <boost/graph/successive_shortest_path_nonnegative_weights.hpp>
 #include <boost/graph/find_flow_cost.hpp>
 
@@ -128,13 +126,16 @@ void do_testcase() {
         eaG.addEdge(N-3-i, v_target, num_cars, 0);
     }
 
-    int flow = boost::push_relabel_max_flow(G, v_source, v_target);
-    boost::cycle_canceling(G);
+    boost::successive_shortest_path_nonnegative_weights(G, v_source, v_target);
     int cost = boost::find_flow_cost(G);
-    /*std::cout << "-----------------------" << std::endl;
-    std::cout << "Minimum Cost Maximum Flow with cycle_canceling()" << std::endl;
-    std::cout << "flow " << flow1 << std::endl; 
-    std::cout << "cost " << -cost1 << std::endl;*/
+    
+    int flow = 0;
+    // Iterate over all edges leaving the source to sum up the flow values.
+    OutEdgeIt e, eend;
+    for(boost::tie(e, eend) = boost::out_edges(boost::vertex(v_source,G), G); e != eend; ++e) {
+        flow += capacitymap[*e] - rescapacitymap[*e];
+    }
+    
     cout << max_time*max_profit*flow-cost << endl;
     
 }
