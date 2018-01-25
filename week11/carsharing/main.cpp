@@ -1,3 +1,7 @@
+/*
+    This solution achieves only 80 / 100 points. For full points we would need to do a compression of the time dimension per rental station. 
+*/
+
 #include <vector>
 #include <iostream>
 #include <cstdlib>
@@ -99,8 +103,9 @@ void do_testcase() {
         times.insert(dep_time);
         times.insert(arrival_time);
     }
-    map<int, int>   time_to_id;
+    //map<int, int>   time_to_id;
     vector<int>     id_to_time(times.size());
+    vector<int>     time_to_id(100001);
     size_t i = 0;
 
     for(auto it = times.begin(); it != times.end(); it++) {
