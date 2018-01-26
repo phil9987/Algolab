@@ -6,79 +6,87 @@
 #include <CGAL/QP_models.h>
 #include <CGAL/QP_functions.h>
 #include <CGAL/Gmpz.h>
+//#include "prettyprint.hpp"
 
 // choose exact integral type
-typedef CGAL::Gmpz ET;
-typedef CGAL::Quotient<ET> SolT;
-
-
-// program and solution types
-typedef CGAL::Quadratic_program<int> Program;
+typedef CGAL::Gmpq ET;
+typedef CGAL::Quadratic_program<ET> Program;
 typedef CGAL::Quadratic_program_solution<ET> Solution;
 
+using namespace std;
+
+int testcase(size_t n, size_t m) {
+
+    vector<pair<int, int> > assets(n);
+    for(size_t i = 0; i < n; i++) {
+        size_t c, r;
+        cin >> c >> r;
+        assets.at(i) = make_pair(c, r);
+    }
+
+    vector<vector<long> > cov_matrix(n, vector<long>(n));
+    for(size_t i = 0; i < n; i++) {
+        for(size_t j = 0; j < n; j++) {
+            cin >> cov_matrix.at(i).at(j);
+        }
+    }
+
+    vector<int> max_cost(m);
+    vector<int> min_return(m);
+    vector<int> max_variance(m);
+    for(size_t i = 0; i < m; i++) {
+        cin >> max_cost.at(i);
+        cin >> min_return.at(i);
+        cin >> max_variance.at(i);
+    }
+
+    //cout << assets << endl;
+    //cout <<cov_matrix << endl;
+    //cout << max_cost << endl;
+    //cout << min_return << endl;
+    //cout << max_variance << endl;
+
+    for(size_t p = 0; p < m; p++) {
+        Program qp (CGAL::SMALLER, true, 0, false, 0);
+        
+        
+        // expected return >= R
+        for(size_t i = 0; i < n; i++) {
+            qp.set_a(i, 0, assets.at(i).second);
+        }
+        qp.set_b(0, min_return.at(p));
+        qp.set_r(0, CGAL::LARGER);
+
+        // total cost <= C
+        for(size_t i = 0; i < n; i++) {
+            qp.set_a(i, 1, assets.at(i).first);
+        }
+        qp.set_b(1, max_cost.at(p));
+
+        for(size_t i = 0; i < n; i++) {
+            for(size_t j = 0; j <= i; j++) {
+                    qp.set_d(i, j, 2*cov_matrix.at(i).at(j));
+            }
+        }
+        assert(qp.is_nonnegative());
+        Solution s = CGAL::solve_nonnegative_quadratic_program(qp, ET());
+        if(s.is_optimal() && s.objective_value() <= max_variance.at(p)) {
+            cout << "Yes." << endl;
+        } else {
+            cout << "No." << endl;
+        }
+    }
+
+}
+
+// Main function to loop over the testcases
 int main() {
-  // by default, we have an LP with Ax <= b and no bounds for
-  // the four variables alpha, beta, gamma, delta
-  Program lp (CGAL::SMALLER, false, 0, false, 0);
-  const int alpha = 0;
-  const int beta  = 1;
-  const int gamma = 2;
-  const int delta = 3;
-
-  // number of red and blue points
-  int m; std::cin >> m;
-  int n; std::cin >> n;
-
-  // read the red points (cancer cells)
-  for (int i=0; i<m; ++i) {
-    int x; std::cin >> x;
-    int y; std::cin >> y;
-    // set up <= constraint for point inside/on circle:
-    //   -alpha x - beta y - gamma <= -x^2 - y^2
-    lp.set_a (alpha, i, -x);
-    lp.set_a (beta,  i, -y);
-    lp.set_a (gamma, i, -1);
-    lp.set_b (       i, -x*x - y*y);
-  }
-  // read the blue points (healthy cells)
-  for (int j=0; j<n; ++j) {
-    int x; std::cin >> x;
-    int y; std::cin >> y;
-    // set up <= constraint for point outside circle:
-    //   alpha x + beta y + gamma + delta <= x^2 + y^2
-    lp.set_a (alpha, m+j, x);
-    lp.set_a (beta,  m+j, y);
-    lp.set_a (gamma, m+j, 1);
-    lp.set_a (delta, m+j, 1);
-    lp.set_b (       m+j, x*x + y*y);
-  }
-
-  // objective function: -delta (the solver minimizes)
-  lp.set_c(delta, -1);
-
-  // enforce a bounded problem:
-  lp.set_u (delta, true, 1);
-
-  // solve the program, using ET as the exact type
-  Solution s = CGAL::solve_linear_program(lp, ET());
-  assert (s.solves_linear_program(lp));
-
-  // output exposure center and radius, if they exist
-  if (s.is_optimal() && (s.objective_value() < 0)) {
-    // *opt := alpha, *(opt+1) := beta, *(opt+2) := gamma
-    CGAL::Quadratic_program_solution<ET>::Variable_value_iterator
-      opt = s.variable_values_begin();
-    CGAL::Quotient<ET> alpha = *opt;
-    CGAL::Quotient<ET> beta = *(opt+1);
-    CGAL::Quotient<ET> gamma = *(opt+2);
-    std::cout << "There is a valid exposure:\n";
-    std::cout << " Center = ("        // (alpha/2, beta/2)
-	      << alpha/2 << ", " <<  beta/2
-	      << ")\n";
-    std::cout << " Squared Radius = " // gamma + alpha^2/4 + beta^2/4
-	      << gamma + alpha*alpha/4 + beta*beta/4 << "\n";
-  } else
-    std::cout << "There is no valid exposure.";
-  std::cout << "\n";
-  return 0;
+	std::ios_base::sync_with_stdio(false);
+	size_t n, m;
+    cin >> n >> m;
+    while(n > 0 && m > 0) {
+        testcase(n, m);
+        cin >> n >> m;
+    }
+	return 0;
 }
