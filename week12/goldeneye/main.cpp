@@ -13,23 +13,20 @@ void do_testcase() {
     long p;
     cin >> n >> m >> p;
 
-    vector<pair<P, P> > jammers(n);
-    vector<vector<P> > missions(m);
+    vector<P> jammers(n);
+    vector<pair<P, P> > missions(m);
 
     for(int i = 0; i < n; i++) {
         // read in jammer positions
-        // x, y
-        P x, y;
-        cin >> x >> y;
-        jammers.at(i) = make_pair(x,y);
+        cin >> jammers.at(i);
     }
 
     for(int i = 0; i < m; i++) {
         // read in missions
         // 4 integer coordinates xs, ys, xt, yt
-        P xs, ys, xt, yt;
-        cin >> xs >> ys >> xt >> yt;
-        missions.at(i) = {xs, ys, xt, yt};
+        P s, t;
+        cin >> s >> t;
+        missions.at(i) = make_pair(s, t);
     }
 }
 
