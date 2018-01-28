@@ -1,3 +1,11 @@
+/*
+	General idea: build MST. For every vertex pair calculate the heaviest edge weight in the path between the two.
+	In the original graph, traverse all the edges which are not part of the MST and find minimal cost which is defined for an edge from i<->j as
+	cost(i,j) = edge_weight(i,j) - max_edge_weight_mst(i,j)
+
+	The intuition behind this is: An MST does by definition not contain any cycle and all the vertices. By adding an edge which is not part of the MST we will introduce a cycle. Now we need to remove one of the edges of the MST-path from i to j (assuming the edge we just added goes from i to j). As we want to find the second smallest MST we want to remove the heaviest edge in the MST-path form i to j to minimize the additional cost.
+*/
+
 // Includes
 // ========
 // STL includes
