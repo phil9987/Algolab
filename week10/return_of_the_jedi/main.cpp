@@ -6,13 +6,11 @@
 #include <algorithm>
 #include <climits>
 #include <cassert>
+#include <stack>
+//#include "prettyprint.hpp"
 // BGL includes
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/graph/prim_minimum_spanning_tree.hpp>
-#include <boost/graph/kruskal_min_spanning_tree.hpp>
-#include <boost/graph/connected_components.hpp>
-#include <boost/graph/max_cardinality_matching.hpp>
 // Namespaces
 using namespace std;
 using namespace boost;
@@ -21,48 +19,19 @@ using namespace boost;
 // BGL Graph definitions
 // =====================
 // Graph Type, OutEdgeList Type, VertexList Type, (un)directedS
-typedef adjacency_list<vecS, vecS, undirectedS,		// Use vecS for the VertexList! Choosing setS for the OutEdgeList disallows parallel edges.
+typedef adjacency_list<vecS, vecS, undirectedS,	
 		no_property,				// interior properties of vertices	
 		property<edge_weight_t, int> 		// interior properties of edges
-		>					Graph;
+		>											Graph;
 typedef graph_traits<Graph>::edge_descriptor		Edge;		// Edge Descriptor: an object that represents a single edge.
 typedef graph_traits<Graph>::vertex_descriptor		Vertex;		// Vertex Descriptor: with vecS vertex list, this is really just an int in the range [0, num_vertices(G)).	
-typedef graph_traits<Graph>::edge_iterator		EdgeIt;		// to iterate over all edges
+typedef graph_traits<Graph>::edge_iterator			EdgeIt;		// to iterate over all edges
 typedef graph_traits<Graph>::out_edge_iterator		OutEdgeIt;	// to iterate over all outgoing edges of a vertex
 typedef property_map<Graph, edge_weight_t>::type	WeightMap;	// property map to access the interior property edge_weight_t
 
 // Functions
 // =========
 // Function for an individual testcase
-
-int mst_cost(Graph G, int V, Vertex start, WeightMap& weightmap) {
-    vector<Vertex> primpredmap(V);	// We MUST use this vector as an Exterior Property Map: Vertex -> Prim Predecessor
-	prim_minimum_spanning_tree(G, make_iterator_property_map(primpredmap.begin(), get(vertex_index, G)), root_vertex(start));
-    	
-	int totalweight = 0;
-	for (int i = 0; i < V; ++i) {
-		if (primpredmap[i] != i) {
-			Edge e; bool success;
-			tie(e, success) = edge(i, primpredmap[i], G);
-			totalweight += weightmap[e];
-		}
-	}
-    //clog << "Edges in Prim's minimum spanning:\n";	
-	// iterate over all vertices
-	for (int i = 0; i < V; ++i) {
-		// OutEdgeIterators
-		// ================
-		Vertex u = i;
-		OutEdgeIt oebeg, oeend;
-		for (tie(oebeg, oeend) = out_edges(u, G); oebeg != oeend; ++oebeg) {
-			Vertex v = target(*oebeg, G);	// source(*oebeg, G) is guaranteed to be u, even in an undirected graph.
-			if (primpredmap[u] == v) {
-				//clog << u << " -- " << v << " (weight " << weightmap[*oebeg] << ")\n";
-			}
-		}
-	}
-	return totalweight;
-}
 void testcase() {
 
     size_t num_planets, start_planet;
@@ -72,10 +41,9 @@ void testcase() {
     int V = num_planets;
 	Graph G(V);	// creates an empty graph on n vertices
 	WeightMap weightmap = get(edge_weight, G);	
-	for (size_t i = 0; i < V-1; ++i) {
-        for(size_t j = i+1; j < V; ++j) {
-            size_t c; cin >> c;
-            //clog << "adding edge " << i << " <-> " << j << " cost: " << c << endl;
+	for (int i = 0; i < V-1; ++i) {
+        for(int j = i+1; j < V; ++j) {
+            int c; cin >> c;
             Edge e;	bool success;
             tie(e, success) = add_edge(i, j, G);
             weightmap[e] = c;		
@@ -87,51 +55,69 @@ void testcase() {
 	vector<Vertex> primpredmap(V);	// We MUST use this vector as an Exterior Property Map: Vertex -> Prim Predecessor
 	Vertex start = start_planet;
 	prim_minimum_spanning_tree(G, make_iterator_property_map(primpredmap.begin(), get(vertex_index, G)), root_vertex(start));
-    	
+	vector<vector<pair<int, int> > > mst_graph(V);
 	int totalweight_mst = 0;
 	for (int i = 0; i < V; ++i) {
 		if (primpredmap[i] != i) {
 			Edge e; bool success;
-			tie(e, success) = edge(i, primpredmap[i], G);
-			totalweight_mst += weightmap[e];
+			tie(e, success) = edge(i, primpredmap[i], G);			// get edge from original G
+			int cost = weightmap[e];
+			totalweight_mst += cost;
+
+			mst_graph.at(i).push_back(make_pair(primpredmap[i], cost));
+			mst_graph.at(primpredmap[i]).push_back(make_pair(i, cost));
+		}
+	}
+
+	vector<vector<int> > max_weight_edge(V, vector<int>(V, 0));
+	for(int i = 0; i < V; i++) {
+		// BFS to find heaviest edge from i to every other edge
+		std::vector<int> vis(V, false); // visited flags
+		std::stack<int> Q; // BFS queue (from std:: not boost::)
+		vis[i] = true; // Mark the source as visited
+		Q.push(i);
+		while (!Q.empty()) {
+			const int u = Q.top();
+			Q.pop();
+			for(pair<int, int> edge : mst_graph.at(u)) {
+				const int v = edge.first;
+				const int cost = edge.second;
+				if(vis[v]) continue;
+				max_weight_edge.at(i).at(v) = max(max_weight_edge.at(i).at(u), cost);
+				vis[v] = true;
+				Q.push(v);
+			}
 		}
 	}
 
 	// iterate over all vertices
-    vector<Edge> edges;
+	int min_additional_cost = INT_MAX;
+	EdgeIt ebeg, eend;
+	for (tie(ebeg, eend) = edges(G); ebeg != eend; ++ebeg) {
+		Vertex i = source(*ebeg, G);
+		Vertex j = target(*ebeg, G);
+		if(!(primpredmap[i] == j || primpredmap[j] == i)) {
+			// edge is not part of MST
+				int cost = weightmap[*ebeg];
+				min_additional_cost = min(min_additional_cost, cost - max_weight_edge.at(i).at(j));
+		}
+	}	
+	/*	ATTENTION: This code does not pass test3 (timelimit). The problem is the lookup time for an edge (log(V/E) according to http://www.boost.org/doc/libs/1_39_0/libs/graph/doc/using_adjacency_list.html)
 	for (int i = 0; i < V; ++i) {
-		// OutEdgeIterators
-		// ================
-		Vertex u = i;
-		OutEdgeIt oebeg, oeend;
-        Edge edge_to_remove;
-		for (tie(oebeg, oeend) = out_edges(u, G); oebeg != oeend; ++oebeg) {
-			Vertex v = target(*oebeg, G);	// source(*oebeg, G) is guaranteed to be u, even in an undirected graph.
-			if (primpredmap[u] == v) {
-				edges.push_back(*oebeg);
-                //clog << u << " -- " << v << " (weight " << weightmap[*oebeg] << ")\n";
+		for(int j = i+1; j < V; ++j) {
+			if(!(primpredmap[i] == j || primpredmap[j] == i)) {
+				// edge is not part of MST
+				Edge e; bool success;
+				tie(e, success) = edge(i, j, G);
+				if(success) {
+					int cost = weightmap[e];
+					min_additional_cost = min(min_additional_cost, cost - max_weight_edge.at(i).at(j));
+				}
 			}
 		}
-	}
-    //clog << "---" << endl;
-    int othermintotalweight = INT_MAX;
-    for(Edge e: edges) {
-        Vertex s, t;
-        s = source(e, G);
-        t = target(e, G);
-        int cost = weightmap[e];
-        remove_edge(e, G);
-        int c = mst_cost(G, V, start_planet, weightmap);
-        othermintotalweight = min(othermintotalweight, c);
-        if(othermintotalweight == totalweight_mst) {
-            break;
-        }
-        Edge e_; bool success;
-		tie(e_, success) = add_edge(s, t, G);
-        weightmap[e_] = cost;
-    }
-    //clog << "mst_totalweight=" << totalweight_mst << endl;
-    cout << othermintotalweight << endl;
+	}*/
+
+	cout << totalweight_mst + min_additional_cost << endl;
 }
 
 // Main function to loop over the testcases
