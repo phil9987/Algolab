@@ -2,11 +2,15 @@
 #include <CGAL/Min_circle_2.h>
 #include <CGAL/Min_circle_2_traits_2.h>
 #include <iostream>
+#include <algorithm>
+#include <set>
+#include <cassert>
 
 // typedefs
 typedef  CGAL::Exact_predicates_exact_constructions_kernel_with_sqrt K;
 typedef  CGAL::Min_circle_2_traits_2<K>  Traits;
 typedef  CGAL::Min_circle_2<Traits>      Min_circle;
+typedef K::Point_2 P;
 
 using namespace std;
 
@@ -22,21 +26,23 @@ int main() {
     int n; cin >> n;
     while(n > 0) {      // process all testcases
 
-        vector<K::Point_2> points(n);        
+        set<K::Point_2> points;        
 
         for (int i = 0; i < n; ++i) {
             long x, y; cin >> x >> y;
             K::Point_2 p(x, y);
-            points[i] = p;
+            points.insert(p);
         }
-
         Min_circle mc(points.begin(), points.end(), true);
+        K::FT min_sq_radius = mc.circle().squared_radius();
         for (auto support_point = mc.support_points_begin(); support_point != mc.support_points_end(); ++support_point) {
-            
-
+            set<P> diff = points;
+            int res = diff.erase(*support_point);
+            assert(res == 1);
+            Min_circle mc1(diff.begin(), diff.end(), true);
+            min_sq_radius = min(min_sq_radius, mc1.circle().squared_radius());
         }
-        Traits::Circle c = mc.circle();
-        K::FT d = sqrt(c.squared_radius());
+        K::FT d = sqrt(min_sq_radius);
         std::cout << (long) ceil_to_double(d) << std::endl;
         
         cin >> n;
