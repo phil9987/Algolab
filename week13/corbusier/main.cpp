@@ -5,6 +5,7 @@
 #include <vector>
 #include <algorithm>
 #include <bitset>
+#include <set>
 
 // Namespaces
 using namespace std;
@@ -13,7 +14,7 @@ using namespace std;
 // =========
 // Function for an individual testcase
 void testcase() {
-    unsigned n, i, k;
+    int n, i, k;
     cin >> n >> i >> k;
     vector<unsigned> disks(n);
 
@@ -23,14 +24,36 @@ void testcase() {
         disks.at(a) = tmp;
     }
     bool found = false;
-    for ( int s = 1; s < 1 << n && !found ; ++ s ){ // iterate through all subsets
+    unsigned n1 = n/2;
+    unsigned n2 = n - n1;
+
+    //vector<unsigned> L1(1 << n1);
+    set<unsigned> L1;
+    for ( size_t s = 1; s < 1 << n1; ++s ){ // iterate through all subsets
         int sum = 0;
         bitset<30> bits(s);
-        for ( int i = 0; i < 30 ; ++ i ){
-            if(bits.test(i)) sum += disks.at(i);    // if i - th element in subset
+        for ( int j = 0; j < min(n, 30); ++j ){
+            if(bits.test(j)) sum += disks.at(j);    // if i - th element in subset
         }
-        sum = sum % k;
-        if ( sum == i ){
+        L1.insert(sum % k);
+    }
+
+    for (size_t s = 1; s < 1 << n2 && !found; ++s) {
+        int sum = 0;
+        bitset<30> bits(s);
+        for(size_t j = 0; j < min(n, 30); ++j) {
+            if(bits.test(j)) sum += disks.at(n1+j);
+        }
+        sum = sum %k;
+        int target = i-sum;
+        if(target < 0) {
+            target = k + target;
+        } else {
+            target = target % k;
+        }
+
+        auto it = lower_bound(L1.begin(), L1.end(), target);
+        if(it != L1.end() && (*it +  sum) % k == i) {
             found = true;
         }
     }
