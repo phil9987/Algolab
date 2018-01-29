@@ -36,11 +36,10 @@ int main() {
         Min_circle mc(points.begin(), points.end(), true);
         K::FT min_sq_radius = mc.circle().squared_radius();
         for (auto support_point = mc.support_points_begin(); support_point != mc.support_points_end(); ++support_point) {
-            set<P> diff = points;
-            int res = diff.erase(*support_point);
-            assert(res == 1);
-            Min_circle mc1(diff.begin(), diff.end(), true);
+            points.erase(*support_point);
+            Min_circle mc1(points.begin(), points.end(), true);
             min_sq_radius = min(min_sq_radius, mc1.circle().squared_radius());
+            points.insert(*support_point);
         }
         K::FT d = sqrt(min_sq_radius);
         std::cout << (long) ceil_to_double(d) << std::endl;
