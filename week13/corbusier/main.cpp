@@ -24,37 +24,23 @@ void testcase() {
         disks.at(a) = tmp;
     }
     bool found = false;
-    unsigned n1 = n/2;
-    unsigned n2 = n - n1;
 
-    //vector<unsigned> L1(1 << n1);
-    set<unsigned> L1;
-    for ( size_t s = 1; s < 1 << n1; ++s ){ // iterate through all subsets
-        int sum = 0;
-        bitset<30> bits(s);
-        for ( int j = 0; j < min(n, 30); ++j ){
-            if(bits.test(j)) sum += disks.at(j);    // if i - th element in subset
+    vector<vector<bool> > DP(n, vector<bool>(k, false));
+    DP.at(0).at(disks.at(0)) = true;
+    for(size_t a = 1; a < n; a++) {
+        unsigned cur_val = disks.at(a);
+        DP.at(a).at(cur_val) = true;
+        for(size_t b = 0; b < k; b++) {
+            if(DP.at(a-1).at(b)){
+                DP.at(a).at(b) = true;
+                DP.at(a).at((cur_val + b) % k) = true;
+            }
         }
-        L1.insert(sum % k);
     }
-
-    for (size_t s = 1; s < 1 << n2 && !found; ++s) {
-        int sum = 0;
-        bitset<30> bits(s);
-        for(size_t j = 0; j < min(n, 30); ++j) {
-            if(bits.test(j)) sum += disks.at(n1+j);
-        }
-        sum = sum %k;
-        int target = i-sum;
-        if(target < 0) {
-            target = k + target;
-        } else {
-            target = target % k;
-        }
-
-        auto it = lower_bound(L1.begin(), L1.end(), target);
-        if(it != L1.end() && (*it +  sum) % k == i) {
+    for(size_t a = 0; a < n; a++) {
+        if(DP.at(a).at(i)) {
             found = true;
+            break;
         }
     }
 
