@@ -33,7 +33,7 @@ bool can_escape(const Triangulation &t, P user, long dist2) {
     if(touching(user, v->point(), dist2)) {
         //cout << "<touching>-";
         return false;
-    } else if(f1->info() == Free) {
+    } else if(f1->info() == SIZE_MAX) {
         // user is already in an infinite face
         //cout << "<infinite_face>-";
         return true;
