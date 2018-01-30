@@ -4,8 +4,6 @@
 #include <queue>
 #include <climits>
 
-enum Status { Unvisited = 0, Free = 2, Visited = 3 };
-
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef CGAL::Triangulation_vertex_base_2<K> Vb;
 typedef CGAL::Triangulation_face_base_with_info_2<double,K> Fb;
@@ -58,15 +56,19 @@ void do_testcase(size_t num_infected_people) {
     // construct triangulation
     Triangulation t;
     t.insert(infection_coord.begin(), infection_coord.end());
+
+    // in infinite faces store infinite radius
     Triangulation::Face_circulator fc = t.incident_faces(t.infinite_vertex());
     do {
         fc->info() = SIZE_MAX;
     } while (++fc != t.incident_faces(t.infinite_vertex()));
+    // in finite faces store radius 0 for init
     for (Face_iterator fi = t.finite_faces_begin(); fi != t.finite_faces_end(); ++fi) {
         fi->info() = 0;
     }
     size_t unchanged_since = 0;
     while(unchanged_since < infection_coord.size()) {
+        // iterate over all faces until nothing changes anymore to find the bottleneck escape radius
         for (Face_iterator fi = t.finite_faces_begin(); fi != t.finite_faces_end(); ++fi) {
             double min_neighbor_radius = fi->info();
             for(int i = 0; i < 3; i++) {
@@ -74,8 +76,8 @@ void do_testcase(size_t num_infected_people) {
                 P p2 = fi->vertex((i+1)%3)->point();
                 Face_handle f2 = fi->neighbor((i+2)%3);
                 double dist = CGAL::squared_distance(p1, p2);
-                dist = min(dist, f2->info());
-                min_neighbor_radius = max(dist, min_neighbor_radius);
+                dist = min(dist, f2->info());       // dist is bottlenecked by the radius between the current face and the neighbor face and the bottleneck of the neighboring face
+                min_neighbor_radius = max(dist, min_neighbor_radius);   // min_neighbor_radius is the maximum bottleneck of all the face neighbors
             }
             if(fi->info() != min_neighbor_radius) {
                 fi->info() = min_neighbor_radius;
