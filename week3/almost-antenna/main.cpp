@@ -26,20 +26,22 @@ int main() {
     int n; cin >> n;
     while(n > 0) {      // process all testcases
 
-        set<K::Point_2> points;        
+        vector<K::Point_2> points(n);        
 
         for (int i = 0; i < n; ++i) {
             long x, y; cin >> x >> y;
             K::Point_2 p(x, y);
-            points.insert(p);
+            points.at(i) = p;
         }
         Min_circle mc(points.begin(), points.end(), true);
         K::FT min_sq_radius = mc.circle().squared_radius();
         for (auto support_point = mc.support_points_begin(); support_point != mc.support_points_end(); ++support_point) {
-            points.erase(*support_point);
+            int i = 0;
+            while(points.at(i) != *support_point) i++;
+            points.at(i) = points.at((i+1)%n);
             Min_circle mc1(points.begin(), points.end(), true);
             min_sq_radius = min(min_sq_radius, mc1.circle().squared_radius());
-            points.insert(*support_point);
+            points.at(i) = *support_point;
         }
         K::FT d = sqrt(min_sq_radius);
         std::cout << (long) ceil_to_double(d) << std::endl;
