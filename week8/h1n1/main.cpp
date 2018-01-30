@@ -2,12 +2,13 @@
 #include <CGAL/Delaunay_triangulation_2.h>
 #include <CGAL/Triangulation_face_base_with_info_2.h>
 #include <queue>
+#include <climits>
 
 enum Status { Unvisited = 0, Free = 2, Visited = 3 };
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel K;
 typedef CGAL::Triangulation_vertex_base_2<K> Vb;
-typedef CGAL::Triangulation_face_base_with_info_2<Status,K> Fb;
+typedef CGAL::Triangulation_face_base_with_info_2<double,K> Fb;
 typedef CGAL::Triangulation_data_structure_2<Vb,Fb> Tds;
 typedef CGAL::Delaunay_triangulation_2<K,Tds> Triangulation;
 typedef Triangulation::Edge_iterator  Edge_iterator;
@@ -19,7 +20,6 @@ typedef Triangulation::Face_circulator Face_circulator;
 typedef K::Point_2 P;
 
 using namespace std;
-
 
 bool touching(P p1, P p2, long long dist2) {
     return CGAL::squared_distance(p1, p2) < dist2;
@@ -41,43 +41,11 @@ bool can_escape(const Triangulation &t, P user, long dist2) {
         return true;
     } else {
         // we are inside the triangulation, check  if he can escape
-        bool escape = false;
-        queue<Face_handle> q;
-        vector<Face_handle> visited_faces;
-        f1->info() = Visited;
-        visited_faces.push_back(f1);
-        q.push(f1);
-        while(!q.empty() && !escape) {
-            Face_handle f = q.front();
-            q.pop();
-            if(f->info() == Free) {
-                // we reached an infinite face!
-                escape = true;
-                continue;
-            }
-            for(int i = 0; i < 3; i++) {
-                P p1 = f->vertex(i)->point();
-                P p2 = f->vertex((i+1)%3)->point();
-                Face_handle f2 = f->neighbor((i+2)%3);
-                if(!touching(p1, p2, 4*dist2) && f2->info() != Visited){       // if user fits through gap between vertex i and i+1
-                    if(f2->info() == Free){
-                         escape = true;
-                         continue;
-                     }
-                    f2->info() = Visited;
-                    visited_faces.push_back(f2);
-                    q.push(f2);
-                }
-            }
+        if(f1->info() >= 4*dist2) {
+            return true;
+        } else {
+            return false;
         }
-        
-        //reset visited face-infos
-        for(Face_handle fh: visited_faces) {
-            fh->info() = Unvisited;
-        }
-        //cout << "<might_escape>-";
-
-        return escape;
     }
 }
 
@@ -92,10 +60,30 @@ void do_testcase(size_t num_infected_people) {
     t.insert(infection_coord.begin(), infection_coord.end());
     Triangulation::Face_circulator fc = t.incident_faces(t.infinite_vertex());
     do {
-        fc->info() = Free;
+        fc->info() = SIZE_MAX;
     } while (++fc != t.incident_faces(t.infinite_vertex()));
     for (Face_iterator fi = t.finite_faces_begin(); fi != t.finite_faces_end(); ++fi) {
-        fi->info() = Unvisited;
+        fi->info() = 0;
+    }
+    size_t unchanged_since = 0;
+    while(unchanged_since < infection_coord.size()) {
+        for (Face_iterator fi = t.finite_faces_begin(); fi != t.finite_faces_end(); ++fi) {
+            double min_neighbor_radius = fi->info();
+            for(int i = 0; i < 3; i++) {
+                P p1 = fi->vertex(i)->point();
+                P p2 = fi->vertex((i+1)%3)->point();
+                Face_handle f2 = fi->neighbor((i+2)%3);
+                double dist = CGAL::squared_distance(p1, p2);
+                dist = min(dist, f2->info());
+                min_neighbor_radius = max(dist, min_neighbor_radius);
+            }
+            if(fi->info() != min_neighbor_radius) {
+                fi->info() = min_neighbor_radius;
+                unchanged_since = 0;
+            } else {
+                unchanged_since++;
+            }
+        }
     }
     
     size_t num_users; cin >> num_users;
