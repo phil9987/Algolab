@@ -5,16 +5,22 @@
 #include <vector>
 #include <climits>
 #include <algorithm>
+#include <iomanip>
 
 // Namespaces
 using namespace std;
 
-typedef pair<int, int> P;
+typedef pair<double, int> P;
 
-int MAX = 100000000;
+double MAX = INT_MAX;
 
-bool is_b_better(P a, P b) {
+bool is_b_better(P& a, P& b) {
     return b.first < a.first || (a.first == b.first && b.second > a.second);
+}
+
+P better(P& a, P& b) {
+    if(is_b_better(a, b)) return b;
+    else return a;
 }
 
 void testcase() {
@@ -28,40 +34,39 @@ void testcase() {
     }
     int max_volume = *max_element(volume.begin(), volume.end());
     max_volume += k+1;
-    vector<vector<pair<int, int> > > T(n, vector<pair<int, int> >(max_volume, pair<int,int>{MAX, 0}));
+    vector<vector<P > > T(n, vector<P >(max_volume, P{MAX, 0}));
     for(int i = 1; i < max_volume/volume.at(0); i++) {
         T.at(0).at(volume.at(0)*i) = make_pair(cost.at(0)*i, 1);
     }
-    P res = make_pair(INT_MAX, 0);
-
+    vector<P> tempres(4);
     for(int i = 1; i < n; i++) {
         for(int j = 0; j < max_volume; j++) {
             if(j < volume.at(i)) {
                 T.at(i).at(j) = T.at(i-1).at(j);
-            } else {
-                vector<P> res(3);
+            } else {      
                 if(j == volume.at(i)) {
                     // option 0: take only ith element
-                    res.at(0) = (make_pair(cost.at(i), 1));
+                    tempres.at(0) = (make_pair(cost.at(i), 1));
                 } else {
-                    res.at(0) = make_pair(MAX, 0);
+                    tempres.at(0) = make_pair(MAX, 0);
                 }
-                res.at(1) = (T.at(i-1).at(j));
-                P r = T.at(i).at(j-volume.at(i));
-                if(T.at(i-1).at(j-volume.at(i)) == r) {
-                    r.second++;
-                }
-                r.first += cost.at(i);
-                res.at(2) = r;
+                // option 1: don't take any element
+                tempres.at(1) = (T.at(i-1).at(j));
 
-                P optimum = *max_element(res.begin(), res.end(), is_b_better);
-                T.at(i).at(j) = optimum;
-            }
-            if(i == n-1 && j >= k && is_b_better(res, T.at(i).at(j))) {
-                res = T.at(i).at(j);
+                P r = T.at(i).at(j-volume.at(i));
+                r.first += cost.at(i);
+                tempres.at(2) = r;
+                P r1 = T.at(i-1).at(j-volume.at(i));
+                r1.first += cost.at(i);
+                r1.second++;
+                tempres.at(3) = r1;
+
+                
+                T.at(i).at(j) = *max_element(tempres.begin(), tempres.end(), is_b_better);
             }
         }
     }
+    P res = *max_element(T.at(n-1).begin()+k, T.at(n-1).end(), is_b_better);
 
     //cout << T << endl;
     cout << res.first << " " << res.second << endl;
@@ -70,6 +75,7 @@ void testcase() {
 // Main function to loop over the testcases
 int main() {
 	std::ios_base::sync_with_stdio(false);
+    cout << fixed << setprecision(0);
 	int T;	cin >> T;
 	for (; T > 0; --T)	testcase();
 	return 0;
