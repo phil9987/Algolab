@@ -12,7 +12,7 @@ using namespace std;
 
 typedef pair<double, int> P;
 
-double MAX = INT_MAX;
+double MAX = SIZE_MAX;
 
 bool is_b_better(P& a, P& b) {
     return b.first < a.first || (a.first == b.first && b.second > a.second);
