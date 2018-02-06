@@ -1,3 +1,6 @@
+/* idea: DP where T.at(i).at(k) returns a tuple (min_cost, max_drinks) where min_cost is the minimum cost with which k liters can be reached using max_drinks different beverages. The important point is that k does not need to be reached exactly.
+*/
+
 // Includes
 // ========
 // STL includes
@@ -10,18 +13,7 @@
 // Namespaces
 using namespace std;
 
-typedef pair<double, int> P;
-
-double MAX = SIZE_MAX;
-
-bool is_b_better(P& a, P& b) {
-    return b.first < a.first || (a.first == b.first && b.second > a.second);
-}
-
-P better(P& a, P& b) {
-    if(is_b_better(a, b)) return b;
-    else return a;
-}
+typedef pair<long, int> P;
 
 void testcase() {
     int n, k;
@@ -32,41 +24,46 @@ void testcase() {
         cin >> cost.at(i);
         cin >> volume.at(i);
     }
-    int max_volume = *max_element(volume.begin(), volume.end());
-    max_volume += k+1;
-    vector<vector<P > > T(n, vector<P >(max_volume, P{MAX, 0}));
-    for(int i = 1; i < max_volume/volume.at(0); i++) {
-        T.at(0).at(volume.at(0)*i) = make_pair(cost.at(0)*i, 1);
+
+    vector<vector<P > > T(n, vector<P>(k+1));
+    T.at(0).at(0) = make_pair(0,0);
+    for(int liters = 1; liters < k+1; liters++) {
+        long c = cost.at(0) * ((liters + volume.at(0)-1) / volume.at(0));
+        T.at(0).at(liters) = make_pair(c, 1);
     }
-    vector<P> tempres(4);
-    for(int i = 1; i < n; i++) {
-        for(int j = 0; j < max_volume; j++) {
-            if(j < volume.at(i)) {
-                T.at(i).at(j) = T.at(i-1).at(j);
-            } else {      
-                if(j == volume.at(i)) {
-                    // option 0: take only ith element
-                    tempres.at(0) = (make_pair(cost.at(i), 1));
-                } else {
-                    tempres.at(0) = make_pair(MAX, 0);
+
+    for(int drink_idx = 1; drink_idx < n; drink_idx++) {
+        T.at(drink_idx).at(0) = T.at(drink_idx-1).at(0);
+
+        for(int liters = 1; liters < k+1; liters++) {
+            // option 0: don't take this drink:
+            auto dont_take = T.at(drink_idx-1).at(liters);
+            long min_cost;
+            int max_drinks;            
+            if( liters < volume.at(drink_idx)) {
+                // option 1: only take this drink
+                min_cost = cost.at(drink_idx);
+                max_drinks = 1;
+            } else {
+                // option 2: take this drink with others or only this drink
+                auto take = T.at(drink_idx).at(liters - volume.at(drink_idx));
+                min_cost = cost.at(drink_idx) + take.first;
+                max_drinks = take.second;
+                if(T.at(drink_idx -1).at(liters - volume.at(drink_idx)) == take) {
+                    max_drinks += 1;
                 }
-                // option 1: don't take any element
-                tempres.at(1) = (T.at(i-1).at(j));
-
-                P r = T.at(i).at(j-volume.at(i));
-                r.first += cost.at(i);
-                tempres.at(2) = r;
-                P r1 = T.at(i-1).at(j-volume.at(i));
-                r1.first += cost.at(i);
-                r1.second++;
-                tempres.at(3) = r1;
-
-                
-                T.at(i).at(j) = *max_element(tempres.begin(), tempres.end(), is_b_better);
             }
+            if(dont_take.first < min_cost) {
+                min_cost = dont_take.first;
+                max_drinks = dont_take.second;
+            } else if(min_cost == dont_take.first) {
+                max_drinks = max(max_drinks, dont_take.second);
+            }
+            T.at(drink_idx).at(liters) = make_pair(min_cost, max_drinks);
+
         }
     }
-    P res = *max_element(T.at(n-1).begin()+k, T.at(n-1).end(), is_b_better);
+    P res = T.at(n-1).at(k);
 
     //cout << T << endl;
     cout << res.first << " " << res.second << endl;
