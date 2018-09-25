@@ -4,31 +4,12 @@
 #include <map>
 #include <algorithm>
 
-int dfs(int v, int current_time,
-         std::vector<int> &discovered, 
-         std::vector<int> &finished, 
-         std::vector<int> &visited, 
-         std::vector<std::vector<int> > &edges) {
-             // do something for v 
-            int t = current_time + 1;
-            std::cout << "visiting node " << v << " at time " <<t << std::endl;
-            for (int u : edges.at(v)) { 
-                if (visited.at(u) == 0) { 
-                     visited.at(u) = 1; 
-                     discovered.at(u) = t;
-                     t = dfs(u, t, discovered, finished, visited, edges); 
-                } 
-            }
-            finished.at(v) = t;
-            return t + 1;
-}
-
 void testcase() {
     int n_vertices, n_edges, start; std::cin >> n_vertices >> n_edges >> start;
-    std::vector<int> visited(n_vertices, 0);
     std::vector<std::vector<int> > edges(n_vertices);
     std::vector<int> discovery_timestamp(n_vertices, -1);
     std::vector<int> finished_timestamp(n_vertices, -1);
+    std::vector<int> visited(n_vertices, 0);
     discovery_timestamp.at(start) = 0;
     for(int i = 0; i < n_edges; i++) {
         int from, to; std::cin >> from >> to;
@@ -36,26 +17,31 @@ void testcase() {
     }
     int it = 0;
     for(auto adj : edges) {
-        std::sort(adj.begin(), adj.end());
+        // sort descendants in descending order, such that when processed the bigger indices are pushed to stack first, hence smaller indices processed ferce
+        std::sort(adj.begin(), adj.end(), std::greater<int>());
         edges.at(it) = adj;
         it++;
     }
-    std::cout << "start: " << start << std::endl;
-    it = 0;
-    for(auto v: edges) {
-        std::cout << "edges from " << it << ": " << std::endl;
-        for(auto el: v) {
-            std::cout << el << ' ';
+    std::stack<int> stack;
+    stack.push(start);
+    int time = 0;
+    while(!stack.empty()) {
+        int current = stack.top();
+        stack.pop();
+        discovery_timestamp.at(current) = 
+
+        if(!visited.at(current)) {
+            // this node is finished
+
+            visited.at(current) = 1;
         }
-        std::cout << std::endl;
-        it++;
+
+        for(int i: edges.at(current)) {
+            if(!visited.at(i)) {
+                stack.push(i);
+            }
+        }
     }
-    int total_time = dfs(start, 0, discovery_timestamp, finished_timestamp, visited, edges);
-    std::cout << "total time passed = " << total_time << std::endl;
-    for(int d: discovery_timestamp) std::cout << d << " ";
-    std::cout << std::endl;
-    for(int f: finished_timestamp) std::cout << f << " ";
-    std::cout << std::endl;
 }   
 
 int main() {
