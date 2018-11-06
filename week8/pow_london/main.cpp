@@ -93,16 +93,24 @@ void testcases() {
             char c; std::cin >> c;
             newspaperBack.at(i).at(j) = charToInt(c);
         }
-    }
+    }	
 
 
-    int newspaperOffset = height*width;
     int alphabetSize = 26;
+    int newspaperOffset = alphabetSize*alphabetSize;
     int V = newspaperOffset + alphabetSize;
     std::vector<int> targetChars(26, 0);
     int targetFlow = targetString.length();
     for(int i = 0; i < targetFlow; i++) {
         targetChars.at(charToInt(targetString.at(i)))++;
+    }
+    std::vector<int> newspaperInput(newspaperOffset, 0);
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            int frontLetter = newspaperFront.at(i).at(j);
+            int backLetter = newspaperBack.at(i).at(width-j-1);
+            newspaperInput.at(frontLetter*alphabetSize + backLetter)++;
+        }
     }
 	// Create Graph and Maps
 	Graph G(V);
@@ -113,14 +121,14 @@ void testcases() {
 
 	Vertex source = boost::add_vertex(G);
 	Vertex target = boost::add_vertex(G);
-    for(int i = 0; i < height; i++) {
-        for(int j = 0; j < width; j++) {
-            int newspaperVertex = i*width + j;
-            eaG.addEdge(source, newspaperVertex, 1);
-            eaG.addEdge(newspaperVertex, newspaperOffset + newspaperFront.at(i).at(j),1);
-            eaG.addEdge(newspaperVertex, newspaperOffset + newspaperBack.at(i).at(width-j-1),1);
+    for(int firstLetter = 0; firstLetter < alphabetSize; firstLetter++) {
+        for(int secondLetter = 0; secondLetter < alphabetSize; secondLetter++) {
+            int newspaperVertex = firstLetter*alphabetSize + secondLetter;
+            eaG.addEdge(source, newspaperVertex, newspaperInput.at(newspaperVertex));
+            eaG.addEdge(newspaperVertex, newspaperOffset + firstLetter, newspaperInput.at(newspaperVertex));
+            eaG.addEdge(newspaperVertex, newspaperOffset + secondLetter, newspaperInput.at(newspaperVertex));
         }
-    }	
+    }
     for(int i = 0; i < alphabetSize; i++) {
         eaG.addEdge(newspaperOffset + i, target, targetChars.at(i));
     }
