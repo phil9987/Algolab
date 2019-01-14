@@ -111,7 +111,7 @@ void testcase() {
         int current_cost = max_cost;
         //while (too_small(lmax)) lmax *= 2;
         while (lmin < lmax) {
-            int p = (lmin + lmax)/2;
+            int p = (lmin + lmax+1)/2;
             capacitymap[e] = p;
             capacitymap[rev_e] = 0;
             boost::successive_shortest_path_nonnegative_weights(G, num_cities, end);
@@ -119,15 +119,15 @@ void testcase() {
             if (current_cost > total_budget)
                 lmax = p-1;
             else
-                lmin = p+1;
+                lmin = p;
             //std::cout << lmin << ' ' << p << ' ' << lmax << ' ' << current_cost << ' ' << total_budget << std::endl;
         }
-        capacitymap[e] = lmin;
+        /*capacitymap[e] = lmin;
         capacitymap[rev_e] = 0;
         boost::successive_shortest_path_nonnegative_weights(G, num_cities, end);
         current_cost = boost::find_flow_cost(G);
         if(current_cost > total_budget)
-            lmin--;
+            lmin--;*/
         std::cout << lmin << std::endl;
     }
 
